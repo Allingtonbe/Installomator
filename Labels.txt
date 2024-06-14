@@ -369,7 +369,6 @@ keyaccess
 keybase
 keyboardmaestro
 keyshot12
-keyshot12_2024
 keystoreexplorer
 kimplusclientmodul
 klokki
@@ -396,7 +395,6 @@ logitechoptionsplus
 logitune
 logseq
 loom
-loupedeck
 lowprofile
 lsagent
 lucidlink
@@ -434,6 +432,7 @@ microsoftedge
 microsoftedgeconsumerstable
 microsoftedgeenterprisestable
 microsoftexcel
+microsoftexcelreset
 microsoftlicenseremovaltool
 microsoftlicensereset
 microsoftoffice365
@@ -446,10 +445,13 @@ microsoftonedrive-rollingout
 microsoftonedrive-rollingoutdeferred
 microsoftonedrivereset
 microsoftonenote
+microsoftonenotereset
 microsoftoutlook
 microsoftoutlook-monthly
+microsoftoutlookdataremoval
 microsoftoutlookreset
 microsoftpowerpoint
+microsoftpowerpointreset
 microsoftremotedesktop
 microsoftsharepointplugin
 microsoftskypeforbusiness
@@ -460,6 +462,7 @@ microsoftteamsnew
 microsoftteamsreset
 microsoftvisualstudiocode
 microsoftword
+microsoftwordreset
 mightymike
 mindmanager
 miniconda
@@ -597,7 +600,6 @@ realvncserver
 realvncviewer
 rectangle
 redcanarymacmonitor
-redshift
 reflector4
 relatel
 remotedesktopmanagerenterprise
@@ -617,9 +619,7 @@ ringcentralmeetings
 ringcentralphone
 rocket
 rocketchat
-rodecentral
 rodeconnect
-rodeunify
 royaltsx
 rstudio
 rustdesk

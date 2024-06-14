@@ -4,7 +4,7 @@ label="" # if no label is sent to the script, this will be used
 # Installomator
 #
 # Downloads and installs Applications
-# 2020-2024 Installomator
+# 2020-2021 Installomator
 #
 # inspired by the download scripts from William Smith and Sander Schram
 #
@@ -336,8 +336,8 @@ if [[ $(/usr/bin/arch) == "arm64" ]]; then
         rosetta2=no
     fi
 fi
-VERSION="10.5.2"
-VERSIONDATE="2024-06-05"
+VERSION="10.6beta"
+VERSIONDATE="2024-04-23"
 
 # MARK: Functions
 
@@ -3871,9 +3871,9 @@ gimp)
     name="GIMP"
     type="dmg"
     if [[ $(arch) == "arm64" ]]; then
-        downloadURL=https://$(curl -fs https://www.gimp.org/downloads/ | grep -m 1 -o "download.*gimp-.*-arm64.*\.dmg")
+        downloadURL=https://$(curl -fs https://www.gimp.org/downloads/ | grep -m 1 -o "download.*gimp-.*-arm64.dmg")
     elif [[ $(arch) == "i386" ]]; then
-        downloadURL=https://$(curl -fs https://www.gimp.org/downloads/ | grep -m 1 -o "download.*gimp-.*-x86_64.*\.dmg")
+        downloadURL=https://$(curl -fs https://www.gimp.org/downloads/ | grep -m 1 -o "download.*gimp-.*-x86_64.dmg")
     fi
     appNewVersion=$(echo $downloadURL | cut -d "-" -f 2)
     expectedTeamID="T25BQ8HSJF"
@@ -4848,13 +4848,6 @@ keyshot12)
     downloadURL="https://www.keyshot.com/download/357619/"
     appNewVersion="$( curl -v "$downloadURL" 2>&1 | grep location | cut -d '_' -f 4 | cut -d '.' -f 1-2 )"
     ;;
-keyshot12_2024)
-    name="KeyShot12"
-    type="pkg"
-    expectedTeamID="W7B24M74T3"
-    downloadURL="https://www.keyshot.com/download/370762/"
-    appNewVersion="$( curl -v "$downloadURL" 2>&1 | grep location | cut -d '_' -f 4 | cut -d '.' -f 1-2 )"
-    ;;
 keystoreexplorer)
     name="KeyStore Explorer"
     type="dmg"
@@ -5148,14 +5141,6 @@ loom)
     appNewVersion=$(curl -fs https://packages.loom.com/desktop-packages/latest-mac.yml | awk '/version/ {print $2}' )
     expectedTeamID="QGD2ZPXZZG"
     ;;
-loupedeck)
-    name="Loupedeck"
-    type="pkgInDmg"
-    #downloadURL="https://5145542.fs1.hubspotusercontent-na1.net/hubfs/5145542/Knowledge%20Base/LD%20Software%20Downloads/5.8.1/LoupedeckInstaller_5.8.1.18057.dmg"
-    downloadURL=$(curl -fs "https://loupedeck.com/downloads/" | xmllint --html --format - 2>/dev/null | grep -oE "https.*.dmg" | head -1)
-    appNewVersion=$(echo "$downloadURL" | sed -E 's/.*_([0-9.]*).dmg/\1/')
-    expectedTeamID="M24R8BN5BK"
-    ;;
 lowprofile)
     name="Low Profile"
     type="dmg"
@@ -5291,9 +5276,6 @@ macports)
     type="pkg"
     #buildVersion=$(uname -r | cut -d '.' -f 1)
     case $(uname -r | cut -d '.' -f 1) in
-        23)
-            archiveName="Sonoma.pkg"
-            ;;
         22)
             archiveName="Ventura.pkg"
             ;;
@@ -5313,8 +5295,6 @@ macports)
     downloadURL=$(downloadURLFromGit macports macports-base)
     appNewVersion=$(versionFromGit macports macports-base)
     appCustomVersion(){ if [ -x /opt/local/bin/port ]; then /opt/local/bin/port version | awk '{print $2}'; else "0"; fi }
-    updateTool="/opt/local/bin/port"
-    updateToolArguments="selfupdate"
     expectedTeamID="QTA3A3B7F3"
     ;;
 mactex)
@@ -5507,7 +5487,7 @@ microsoftdefenderatp)
     name="Microsoft Defender"
     type="pkg"
     downloadURL="https://go.microsoft.com/fwlink/?linkid=2097502"
-    appNewVersion=$(curl -fs https://raw.githubusercontent.com/MicrosoftDocs/defender-docs/public/defender-endpoint/mac-whatsnew.md | grep -m 1 -o "Build: [0-9\.]*" | awk '{print $2}')
+    appNewVersion=$(curl -fs https://macadmins.software/latest.xml | xpath '//latest/package[id="com.microsoft.defender.standalone"]/version' 2>/dev/null | sed -E 's/<version>([0-9.]*) .*/\1/')
     # No version number in download url
     expectedTeamID="UBF8T346G9"
     if [[ -x "/Library/Application Support/Microsoft/MAU2.0/Microsoft AutoUpdate.app/Contents/MacOS/msupdate" && $INSTALL != "force" && $DEBUG -eq 0 ]]; then
@@ -5523,15 +5503,22 @@ microsoftedgeenterprisestable)
     name="Microsoft Edge"
     type="pkg"
     downloadURL="https://go.microsoft.com/fwlink/?linkid=2093504"
+    #appNewVersion=$(curl -fs https://macadmins.software/latest.xml | xpath '//latest/package[id="com.microsoft.edge"]/cfbundleversion' 2>/dev/null | sed -E 's/<cfbundleversion>([0-9.]*)<.*/\1/')
     appNewVersion=$(curl -fsIL "$downloadURL" | grep -i location: | grep -o "/MicrosoftEdge.*pkg" | sed -E 's/.*\/[a-zA-Z]*-([0-9.]*)\..*/\1/g')
     expectedTeamID="UBF8T346G9"
+    if [[ -x "/Library/Application Support/Microsoft/MAU2.0/Microsoft AutoUpdate.app/Contents/MacOS/msupdate" && $INSTALL != "force" && $DEBUG -eq 0 ]]; then
+        printlog "Running msupdate --list"
+        "/Library/Application Support/Microsoft/MAU2.0/Microsoft AutoUpdate.app/Contents/MacOS/msupdate" --list
+    fi
+    updateTool="/Library/Application Support/Microsoft/MAU2.0/Microsoft AutoUpdate.app/Contents/MacOS/msupdate"
+    updateToolArguments=( --install --apps EDGE01 )
     ;;
 microsoftexcel)
     name="Microsoft Excel"
     type="pkg"
     downloadURL="https://go.microsoft.com/fwlink/?linkid=525135"
-    versionKey="CFBundleVersion"
-    appNewVersion=$(curl -fsIL "$downloadURL" | grep -i location: | grep -o "/Microsoft_.*pkg" | cut -d "_" -f 3)
+    #appNewVersion=$(curl -fs https://macadmins.software/latest.xml | xpath '//latest/package[id="com.microsoft.excel.standalone.365"]/cfbundleshortversionstring' 2>/dev/null | sed -E 's/<cfbundleshortversionstring>([0-9.]*)<.*/\1/')
+    appNewVersion=$(curl -fsIL "$downloadURL" | grep -i location: | grep -o "/Microsoft_.*pkg" | cut -d "_" -f 3 | cut -d "." -f 1-2)
     expectedTeamID="UBF8T346G9"
     if [[ -x "/Library/Application Support/Microsoft/MAU2.0/Microsoft AutoUpdate.app/Contents/MacOS/msupdate" && $INSTALL != "force" && $DEBUG -eq 0 ]]; then
         printlog "Running msupdate --list"
@@ -5539,7 +5526,8 @@ microsoftexcel)
     fi
     updateTool="/Library/Application Support/Microsoft/MAU2.0/Microsoft AutoUpdate.app/Contents/MacOS/msupdate"
     updateToolArguments=( --install --apps XCEL2019 )
-    ;;microsoftexcelreset)
+    ;;
+microsoftexcelreset)
     name="Microsoft Excel Reset"
     type="pkg"
     packageID="com.microsoft.reset.Excel"
@@ -5684,8 +5672,8 @@ microsoftonenote)
     name="Microsoft OneNote"
     type="pkg"
     downloadURL="https://go.microsoft.com/fwlink/?linkid=820886"
-    versionKey="CFBundleVersion"
-    appNewVersion=$(curl -fsIL "$downloadURL" | grep -i location: | grep -o "/Microsoft_.*pkg" | cut -d "_" -f 3)
+    #appNewVersion=$(curl -fs https://macadmins.software/latest.xml | xpath '//latest/package[id="com.microsoft.onenote.standalone.365"]/cfbundleshortversionstring' 2>/dev/null | sed -E 's/<cfbundleshortversionstring>([0-9.]*)<.*/\1/')
+    appNewVersion=$(curl -fsIL "$downloadURL" | grep -i location: | grep -o "/Microsoft_.*pkg" | cut -d "_" -f 3 | cut -d "." -f 1-2)
     expectedTeamID="UBF8T346G9"
     if [[ -x "/Library/Application Support/Microsoft/MAU2.0/Microsoft AutoUpdate.app/Contents/MacOS/msupdate" && $INSTALL != "force" && $DEBUG -eq 0 ]]; then
         printlog "Running msupdate --list"
@@ -5693,7 +5681,8 @@ microsoftonenote)
     fi
     updateTool="/Library/Application Support/Microsoft/MAU2.0/Microsoft AutoUpdate.app/Contents/MacOS/msupdate"
     updateToolArguments=( --install --apps ONMC2019 )
-    ;;microsoftonenotereset)
+    ;;
+microsoftonenotereset)
     name="Microsoft OneNote Reset"
     type="pkg"
     packageID="com.microsoft.reset.OneNote"
@@ -5719,9 +5708,9 @@ microsoftoutlook-monthly)
 microsoftoutlook)
     name="Microsoft Outlook"
     type="pkg"
-    downloadURL=$(curl -fsL "https://learn.microsoft.com/en-us/officeupdates/update-history-office-for-mac" | grep -Eo "https:\/\/officecdn.microsoft.com\/pr\/.*\/MacAutoupdate\/Microsoft_Outlook_.*_Updater.pkg" | head -1)
-    versionKey="CFBundleVersion"
-    appNewVersion=$(echo $downloadURL | cut -d "/" -f 7 | cut -d "_" -f 3)
+    downloadURL="https://go.microsoft.com/fwlink/?linkid=525137"
+    #appNewVersion=$(curl -fs https://macadmins.software/latest.xml | xpath '//latest/package[id="com.microsoft.outlook.standalone.365"]/cfbundleshortversionstring' 2>/dev/null | sed -E 's/<cfbundleshortversionstring>([0-9.]*)<.*/\1/')
+    appNewVersion=$(curl -fsIL "$downloadURL" | grep -i location: | grep -o "/Microsoft_.*pkg" | cut -d "_" -f 3 | cut -d "." -f 1-2)
     expectedTeamID="UBF8T346G9"
     if [[ -x "/Library/Application Support/Microsoft/MAU2.0/Microsoft AutoUpdate.app/Contents/MacOS/msupdate" && $INSTALL != "force" && $DEBUG -eq 0 ]]; then
         printlog "Running msupdate --list"
@@ -5729,7 +5718,8 @@ microsoftoutlook)
     fi
     updateTool="/Library/Application Support/Microsoft/MAU2.0/Microsoft AutoUpdate.app/Contents/MacOS/msupdate"
     updateToolArguments=( --install --apps OPIM2019 )
-    ;;microsoftoutlookdataremoval)
+    ;;
+microsoftoutlookdataremoval)
     name="Microsoft Outlook Data Removal"
     type="pkg"
     packageID="com.microsoft.remove.Outlook.Data"
@@ -5747,8 +5737,8 @@ microsoftpowerpoint)
     name="Microsoft PowerPoint"
     type="pkg"
     downloadURL="https://go.microsoft.com/fwlink/?linkid=525136"
-    versionKey="CFBundleVersion"
-    appNewVersion=$(curl -fsIL "$downloadURL" | grep -i location: | grep -o "/Microsoft_.*pkg" | cut -d "_" -f 3)
+    #appNewVersion=$(curl -fs https://macadmins.software/latest.xml | xpath '//latest/package[id="com.microsoft.powerpoint.standalone.365"]/cfbundleshortversionstring' 2>/dev/null | sed -E 's/<cfbundleshortversionstring>([0-9.]*)<.*/\1/')
+    appNewVersion=$(curl -fsIL "$downloadURL" | grep -i location: | grep -o "/Microsoft_.*pkg" | cut -d "_" -f 3 | cut -d "." -f 1-2)
     expectedTeamID="UBF8T346G9"
     if [[ -x "/Library/Application Support/Microsoft/MAU2.0/Microsoft AutoUpdate.app/Contents/MacOS/msupdate" && $INSTALL != "force" && $DEBUG -eq 0 ]]; then
         printlog "Running msupdate --list"
@@ -5756,7 +5746,8 @@ microsoftpowerpoint)
     fi
     updateTool="/Library/Application Support/Microsoft/MAU2.0/Microsoft AutoUpdate.app/Contents/MacOS/msupdate"
     updateToolArguments=( --install --apps PPT32019 )
-    ;;microsoftpowerpointreset)
+    ;;
+microsoftpowerpointreset)
     name="Microsoft PowerPoint Reset"
     type="pkg"
     packageID="com.microsoft.reset.PowerPoint"
@@ -5865,8 +5856,8 @@ microsoftword)
     name="Microsoft Word"
     type="pkg"
     downloadURL="https://go.microsoft.com/fwlink/?linkid=525134"
-    versionKey="CFBundleVersion"
-    appNewVersion=$(curl -fsIL "$downloadURL" | grep -i location: | grep -o "/Microsoft_.*pkg" | cut -d "_" -f 3)
+    #appNewVersion=$(curl -fs https://macadmins.software/latest.xml | xpath '//latest/package[id="com.microsoft.word.standalone.365"]/cfbundleshortversionstring' 2>/dev/null | sed -E 's/<cfbundleshortversionstring>([0-9.]*)<.*/\1/')
+    appNewVersion=$(curl -fsIL "$downloadURL" | grep -i location: | grep -o "/Microsoft_.*pkg" | cut -d "_" -f 3 | cut -d "." -f 1-2)
     expectedTeamID="UBF8T346G9"
     if [[ -x "/Library/Application Support/Microsoft/MAU2.0/Microsoft AutoUpdate.app/Contents/MacOS/msupdate" && $INSTALL != "force" ]]; then
         printlog "Running msupdate --list"
@@ -5874,7 +5865,8 @@ microsoftword)
     fi
     updateTool="/Library/Application Support/Microsoft/MAU2.0/Microsoft AutoUpdate.app/Contents/MacOS/msupdate"
     updateToolArguments=( --install --apps MSWD2019 )
-    ;;microsoftwordreset)
+    ;;
+microsoftwordreset)
     name="Microsoft Word Reset"
     type="pkg"
     packageID="com.microsoft.reset.Word"
@@ -5944,12 +5936,7 @@ mkuser)
     # appNewVersion="$(versionFromGit freegeek-pdx mkuser unfiltered)"
     # mkuser does not adhere to numbers and dots only for version numbers.
     # Pull request submitted to add an unfiltered option to versionFromGit
-    appNewVersion="$(osascript -l 'JavaScript' -e 'run = argv => JSON.parse(argv[0]).tag_name' -- "$(curl -m 5 -sfL 'https://update.mkuser.sh' 2> /dev/null)" 2> /dev/null)"
-    appCustomVersion(){
-        if [ -e /usr/local/bin/mkuser ]; then
-            awk -F " |=|'" '($2 == "MKUSER_VERSION") { print $(NF-1); exit }' /usr/local/bin/mkuser
-        fi
-    }
+    appNewVersion="$(curl -sLI "https://github.com/freegeek-pdx/mkuser/releases/latest" | grep -i "^location" | tr "/" "\n" | tail -1)"
     expectedTeamID="YRW6NUGA63"
     ;;
 mmhmm-desktop)
@@ -7036,15 +7023,6 @@ redcanarymacmonitor)
     appNewVersion="$(versionFromGit redcanaryco mac-monitor)"
     expectedTeamID="UA6JCQGF3F"
     ;;
-redshift)
-    name="redshift"
-    blockingProcesses=( "Cinema 4D" )
-    type="pkg"
-    packageID="com.redshift3d.redshift"
-    expectedTeamID="4ZY22YGXQG"
-    appNewVersion="$(curl -H "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.1 Safari/605.1.15" -fs "https://support.maxon.net/hc/en-us/sections/4405730592274-Redshift" | grep "\-Redshift-" | grep -Eo "[0-9]+\.[0-9]+\.[0-9]+" | sort -Vru | head -1)"
-    downloadURL=$(curl -H "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.1 Safari/605.1.15" -fs "https://www.maxon.net/en/downloads" | grep -Eo -m 1 "https://installer.maxon.net/installer/rs/redshift_v${appNewVersion}_[a-f0-9]+_macos_metal.pkg")
-    ;;
 reflector4)
     name="Reflector 4"
     type="dmg"
@@ -7180,28 +7158,12 @@ rocketchat)
     expectedTeamID="S6UPZG7ZR3"
     blockingProcesses=( Rocket.Chat )
     ;;
-rodecentral)
-    name="RODE Central"
-    type="pkgInZip"
-    #packageID="com.rodecentral.installer"
-    downloadURL="https://update.rode.com/central/RODE_Central_MACOS.zip"
-    appNewVersion=$(curl -fs https://rode.com/en/release-notes/rode-central | xmllint --html --format - 2>/dev/null | tr '"' '\n' | sed 's/\&quot\;/\n/g' | grep -i -o "Version .*" | head -1 | cut -w -f2)
-    expectedTeamID="Z9T72PWTJA"
-    ;;
 rodeconnect)
     name="RODE Connect"
     type="pkgInZip"
     #packageID="com.rodeconnect.installer" #Versioned wrong as 0 in 1.1.0 pkg
-    downloadURL="https://update.rode.com/connect/RODE_Connect_MACOS.zip"
-    appNewVersion=$(curl -fs https://rode.com/en/release-notes/rode-connect | xmllint --html --format - 2>/dev/null | tr '"' '\n' | sed 's/\&quot\;/\n/g' | grep -i -o "Version .*" | head -1 | cut -w -f2)
-    expectedTeamID="Z9T72PWTJA"
-    ;;
-rodeunify)
-    name="RODE UNIFY"
-    type="pkgInZip"
-    #packageID="com.rodecentral.installer"
-    downloadURL="https://update.rode.com/unify_new/macos/RODE_UNIFY_MACOS.zip"
-    appNewVersion=$(curl -fs https://rode.com/en/release-notes/unify | xmllint --html --format - 2>/dev/null | tr '"' '\n' | sed 's/\&quot\;/\n/g' | grep -i -o "Version .*" | head -1 | cut -w -f2)
+    downloadURL="https://cdn1.rode.com/rodeconnect_installer_mac.zip"
+    appNewVersion="$(curl -fs https://rode.com/software/rode-connect | grep -i -o ">Current version .*<" | cut -d " " -f4)"
     expectedTeamID="Z9T72PWTJA"
     ;;
 royaltsx)
@@ -7479,7 +7441,11 @@ slab)
 slack)
     name="Slack"
     type="dmg"
-    downloadURL="https://slack.com/ssb/download-osx-universal"
+    if [[ $(arch) == i386 ]]; then
+       downloadURL="https://slack.com/ssb/download-osx"
+    elif [[ $(arch) == arm64 ]]; then
+       downloadURL="https://slack.com/ssb/download-osx-silicon"
+    fi
     appNewVersion=$( curl -fsIL "${downloadURL}" | grep -i "^location" | cut -d "/" -f7 )
     expectedTeamID="BQR82RBBHL"
     ;;
@@ -8088,7 +8054,7 @@ thunderbird)
     name="Thunderbird"
     type="dmg"
     downloadURL="https://download.mozilla.org/?product=thunderbird-latest&os=osx&lang=en-US"
-    appNewVersion=$(curl -fsL "https://www.thunderbird.net/notes/" | grep -m 1 -o "Version [0-9\.]*" | awk '{print $2}')
+    appNewVersion=$(curl -fsL "https://www.thunderbird.net/en-US/thunderbird/releases/" | xmllint --html --xpath 'string(//aside/a[last()]/text())' - 2> /dev/null)
     expectedTeamID="43AQ936H96"
     ;;
 thunderbird_intl)

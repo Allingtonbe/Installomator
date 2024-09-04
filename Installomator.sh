@@ -337,6 +337,7 @@ if [[ $(/usr/bin/arch) == "arm64" ]]; then
         rosetta2=no
     fi
 fi
+
 VERSION="10.7beta"
 VERSIONDATE="2024-09-02"
 
@@ -3587,7 +3588,6 @@ filezilla)
     expectedTeamID="5VPGKXL75N"
     blockingProcesses=( NONE )
     ;;
-    
 finaldraft11)
     name="Final Draft 11"
     type="pkgInZip"
@@ -3919,9 +3919,9 @@ gimp)
     name="GIMP"
     type="dmg"
     if [[ $(arch) == "arm64" ]]; then
-        downloadURL=https://$(curl -fs https://www.gimp.org/downloads/ | grep -m 1 -o "download.*gimp-.*-arm64.dmg")
+        downloadURL=https://$(curl -fs https://www.gimp.org/downloads/ | grep -m 1 -o "download.*gimp-.*-arm64.*\.dmg")
     elif [[ $(arch) == "i386" ]]; then
-        downloadURL=https://$(curl -fs https://www.gimp.org/downloads/ | grep -m 1 -o "download.*gimp-.*-x86_64.dmg")
+        downloadURL=https://$(curl -fs https://www.gimp.org/downloads/ | grep -m 1 -o "download.*gimp-.*-x86_64.*\.dmg")
     fi
     appNewVersion=$(echo $downloadURL | cut -d "-" -f 2)
     expectedTeamID="T25BQ8HSJF"
@@ -5604,8 +5604,8 @@ microsoftexcel)
     name="Microsoft Excel"
     type="pkg"
     downloadURL="https://go.microsoft.com/fwlink/?linkid=525135"
-    #appNewVersion=$(curl -fs https://macadmins.software/latest.xml | xpath '//latest/package[id="com.microsoft.excel.standalone.365"]/cfbundleshortversionstring' 2>/dev/null | sed -E 's/<cfbundleshortversionstring>([0-9.]*)<.*/\1/')
-    appNewVersion=$(curl -fsIL "$downloadURL" | grep -i location: | grep -o "/Microsoft_.*pkg" | cut -d "_" -f 3 | cut -d "." -f 1-2)
+    versionKey="CFBundleVersion"
+    appNewVersion=$(curl -fsIL "$downloadURL" | grep -i location: | grep -o "/Microsoft_.*pkg" | cut -d "_" -f 3)
     expectedTeamID="UBF8T346G9"
     if [[ -x "/Library/Application Support/Microsoft/MAU2.0/Microsoft AutoUpdate.app/Contents/MacOS/msupdate" && $INSTALL != "force" && $DEBUG -eq 0 ]]; then
         printlog "Running msupdate --list"
@@ -5613,8 +5613,7 @@ microsoftexcel)
     fi
     updateTool="/Library/Application Support/Microsoft/MAU2.0/Microsoft AutoUpdate.app/Contents/MacOS/msupdate"
     updateToolArguments=( --install --apps XCEL2019 )
-    ;;
-microsoftexcelreset)
+    ;;microsoftexcelreset)
     name="Microsoft Excel Reset"
     type="pkg"
     packageID="com.microsoft.reset.Excel"
@@ -5759,8 +5758,8 @@ microsoftonenote)
     name="Microsoft OneNote"
     type="pkg"
     downloadURL="https://go.microsoft.com/fwlink/?linkid=820886"
-    #appNewVersion=$(curl -fs https://macadmins.software/latest.xml | xpath '//latest/package[id="com.microsoft.onenote.standalone.365"]/cfbundleshortversionstring' 2>/dev/null | sed -E 's/<cfbundleshortversionstring>([0-9.]*)<.*/\1/')
-    appNewVersion=$(curl -fsIL "$downloadURL" | grep -i location: | grep -o "/Microsoft_.*pkg" | cut -d "_" -f 3 | cut -d "." -f 1-2)
+    versionKey="CFBundleVersion"
+    appNewVersion=$(curl -fsIL "$downloadURL" | grep -i location: | grep -o "/Microsoft_.*pkg" | cut -d "_" -f 3)
     expectedTeamID="UBF8T346G9"
     if [[ -x "/Library/Application Support/Microsoft/MAU2.0/Microsoft AutoUpdate.app/Contents/MacOS/msupdate" && $INSTALL != "force" && $DEBUG -eq 0 ]]; then
         printlog "Running msupdate --list"
@@ -5768,8 +5767,7 @@ microsoftonenote)
     fi
     updateTool="/Library/Application Support/Microsoft/MAU2.0/Microsoft AutoUpdate.app/Contents/MacOS/msupdate"
     updateToolArguments=( --install --apps ONMC2019 )
-    ;;
-microsoftonenotereset)
+    ;;microsoftonenotereset)
     name="Microsoft OneNote Reset"
     type="pkg"
     packageID="com.microsoft.reset.OneNote"
@@ -5795,9 +5793,9 @@ microsoftoutlook-monthly)
 microsoftoutlook)
     name="Microsoft Outlook"
     type="pkg"
-    downloadURL="https://go.microsoft.com/fwlink/?linkid=525137"
-    #appNewVersion=$(curl -fs https://macadmins.software/latest.xml | xpath '//latest/package[id="com.microsoft.outlook.standalone.365"]/cfbundleshortversionstring' 2>/dev/null | sed -E 's/<cfbundleshortversionstring>([0-9.]*)<.*/\1/')
-    appNewVersion=$(curl -fsIL "$downloadURL" | grep -i location: | grep -o "/Microsoft_.*pkg" | cut -d "_" -f 3 | cut -d "." -f 1-2)
+    downloadURL=$(curl -fsL "https://learn.microsoft.com/en-us/officeupdates/update-history-office-for-mac" | grep -Eo "https:\/\/officecdn.microsoft.com\/pr\/.*\/MacAutoupdate\/Microsoft_Outlook_.*_Updater.pkg" | head -1)
+    versionKey="CFBundleVersion"
+    appNewVersion=$(echo $downloadURL | cut -d "/" -f 7 | cut -d "_" -f 3)
     expectedTeamID="UBF8T346G9"
     if [[ -x "/Library/Application Support/Microsoft/MAU2.0/Microsoft AutoUpdate.app/Contents/MacOS/msupdate" && $INSTALL != "force" && $DEBUG -eq 0 ]]; then
         printlog "Running msupdate --list"
@@ -5805,8 +5803,7 @@ microsoftoutlook)
     fi
     updateTool="/Library/Application Support/Microsoft/MAU2.0/Microsoft AutoUpdate.app/Contents/MacOS/msupdate"
     updateToolArguments=( --install --apps OPIM2019 )
-    ;;
-microsoftoutlookdataremoval)
+    ;;microsoftoutlookdataremoval)
     name="Microsoft Outlook Data Removal"
     type="pkg"
     packageID="com.microsoft.remove.Outlook.Data"
@@ -5824,8 +5821,8 @@ microsoftpowerpoint)
     name="Microsoft PowerPoint"
     type="pkg"
     downloadURL="https://go.microsoft.com/fwlink/?linkid=525136"
-    #appNewVersion=$(curl -fs https://macadmins.software/latest.xml | xpath '//latest/package[id="com.microsoft.powerpoint.standalone.365"]/cfbundleshortversionstring' 2>/dev/null | sed -E 's/<cfbundleshortversionstring>([0-9.]*)<.*/\1/')
-    appNewVersion=$(curl -fsIL "$downloadURL" | grep -i location: | grep -o "/Microsoft_.*pkg" | cut -d "_" -f 3 | cut -d "." -f 1-2)
+    versionKey="CFBundleVersion"
+    appNewVersion=$(curl -fsIL "$downloadURL" | grep -i location: | grep -o "/Microsoft_.*pkg" | cut -d "_" -f 3)
     expectedTeamID="UBF8T346G9"
     if [[ -x "/Library/Application Support/Microsoft/MAU2.0/Microsoft AutoUpdate.app/Contents/MacOS/msupdate" && $INSTALL != "force" && $DEBUG -eq 0 ]]; then
         printlog "Running msupdate --list"
@@ -5833,8 +5830,7 @@ microsoftpowerpoint)
     fi
     updateTool="/Library/Application Support/Microsoft/MAU2.0/Microsoft AutoUpdate.app/Contents/MacOS/msupdate"
     updateToolArguments=( --install --apps PPT32019 )
-    ;;
-microsoftpowerpointreset)
+    ;;microsoftpowerpointreset)
     name="Microsoft PowerPoint Reset"
     type="pkg"
     packageID="com.microsoft.reset.PowerPoint"
@@ -5960,8 +5956,8 @@ microsoftword)
     name="Microsoft Word"
     type="pkg"
     downloadURL="https://go.microsoft.com/fwlink/?linkid=525134"
-    #appNewVersion=$(curl -fs https://macadmins.software/latest.xml | xpath '//latest/package[id="com.microsoft.word.standalone.365"]/cfbundleshortversionstring' 2>/dev/null | sed -E 's/<cfbundleshortversionstring>([0-9.]*)<.*/\1/')
-    appNewVersion=$(curl -fsIL "$downloadURL" | grep -i location: | grep -o "/Microsoft_.*pkg" | cut -d "_" -f 3 | cut -d "." -f 1-2)
+    versionKey="CFBundleVersion"
+    appNewVersion=$(curl -fsIL "$downloadURL" | grep -i location: | grep -o "/Microsoft_.*pkg" | cut -d "_" -f 3)
     expectedTeamID="UBF8T346G9"
     if [[ -x "/Library/Application Support/Microsoft/MAU2.0/Microsoft AutoUpdate.app/Contents/MacOS/msupdate" && $INSTALL != "force" ]]; then
         printlog "Running msupdate --list"
@@ -5969,8 +5965,7 @@ microsoftword)
     fi
     updateTool="/Library/Application Support/Microsoft/MAU2.0/Microsoft AutoUpdate.app/Contents/MacOS/msupdate"
     updateToolArguments=( --install --apps MSWD2019 )
-    ;;
-microsoftwordreset)
+    ;;microsoftwordreset)
     name="Microsoft Word Reset"
     type="pkg"
     packageID="com.microsoft.reset.Word"
@@ -7543,7 +7538,7 @@ sketch)
 sketchupviewer)
     name="SketchUpViewer"
     type="dmg"
-    downloadURL="$(curl -fs https://www.sketchup.com/sketchup/SketchUpViewer-en-dmg | grep "<a href=" | sed 's/.*href="//' | sed 's/".*//')"
+    downloadURL="$(curl -Lfs https://www.sketchup.com/en/sketchup-viewer/downloads | grep -o 'https://download.sketchup.com/SketchUpViewer[0-9\-]*.dmg')"
     expectedTeamID="J8PVMCY7KL"
     ;;
 skim)
@@ -8180,7 +8175,7 @@ thunderbird)
     name="Thunderbird"
     type="dmg"
     downloadURL="https://download.mozilla.org/?product=thunderbird-latest&os=osx&lang=en-US"
-    appNewVersion=$(curl -fsL "https://www.thunderbird.net/en-US/thunderbird/releases/" | xmllint --html --xpath 'string(//aside/a[last()]/text())' - 2> /dev/null)
+    appNewVersion=$(curl -fsL "https://www.thunderbird.net/notes/" | grep -m 1 -o "Version [0-9\.]*" | awk '{print $2}')
     expectedTeamID="43AQ936H96"
     ;;
 thunderbird_intl)

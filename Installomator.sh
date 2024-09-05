@@ -323,6 +323,16 @@ datadogAPI=""
 # Simply add your own API key for this in order to have logs sent to Datadog
 # See more here: https://www.datadoghq.com/product/log-management/
 
+# Advanced version comparison
+ADVANCED_VERSION_COMPARISON=""
+# options:
+#   - yes   Use more advanced version comparison.
+# By default Installomator will allways attempt to update an application if the installed
+# version is different from the version found online, even if the installed version is 
+# higher. This option will not perform an update if the installed version is higher.
+# Note: Version comparison only works for version formats containing numbers and dots.
+# If any other character is found, it will use the default version comparison.
+
 # Log Date format used when parsing logs for debugging, this is the default used by
 # install.log, override this in the case statements if you need something custom per
 # application (See adobeillustrator).  Using stadard GNU Date formatting.
@@ -337,9 +347,8 @@ if [[ $(/usr/bin/arch) == "arm64" ]]; then
         rosetta2=no
     fi
 fi
-
-VERSION="10.7beta"
-VERSIONDATE="2024-09-02"
+VERSION="10.6.1"
+VERSIONDATE="2024-09-05"
 
 # MARK: Functions
 
@@ -1399,6 +1408,65 @@ updateDialog() {
             echo "listitem: title: $listitem, statustext: $message, status: $state" >> $cmd_file
         fi
     fi
+}
+
+versionCompare() {
+    # Compare 2 versions.
+    # The first argument needs to be the currently installed version.
+    # The second argument is the version to check against.
+    # Return true if the second arugment is a higher version than the first.
+    # Otherwise return false.
+
+    # If versions are the same no update is necessary
+    if [ "$1" = "$2" ]; then
+        echo false
+        return
+    fi
+
+    # Version comparison only supports digits and dots. We should perform an update if the version contains other characters.
+    version1check=$(echo $1 | grep -o "[0-9\.]*")
+    version2check=$(echo $2 | grep -o "[0-9\.]*")
+    if [ "$1" != "$version1check" ] || [ "$2" != "$version2check" ]; then
+        echo true
+        return
+    fi
+
+    # Get the length of the longest version
+    version1length=$(echo $1 | tr -cd . | wc -c | tr -d " ")
+    version2length=$(echo $2 | tr -cd . | wc -c | tr -d " ")
+    if [ $version1length -gt $version2length ]; then
+        length=$version1length
+    else
+        length=$version2length
+    fi
+    length=$(($length + 1))
+
+    # Compare each segment of the versions
+    for ((i=1; i<=$length; i++)); do
+        # Cut the version strings up and get the ith part.
+        # Added a . to handle versions without one. The cut command would always return the full version otherwise.
+        part1=$(echo "$1." | cut -d "." -f $i)
+        part2=$(echo "$2." | cut -d "." -f $i)
+
+        # Make it 0 if the segment is empty.
+        if [[ -z $part1 ]]; then
+            part1=0
+        fi
+        if [[ -z $part2 ]]; then
+            part2=0
+        fi
+
+        if [ $part1 -gt $part2 ]; then
+            echo false
+            return
+        elif [ $part1 -lt $part2 ]; then
+            echo true
+            return
+        fi
+    done
+
+    echo true
+    return
 }
 
 # NOTE: check minimal macOS requirement
@@ -5565,7 +5633,7 @@ microsoftazurestorageexplorer)
 microsoftcompanyportal)
     name="Company Portal"
     type="pkg"
-    downloadURL="https://go.microsoft.com/fwlink/?linkid=869655"
+    downloadURL="https://go.microsoft.com/fwlink/?linkid=853070"
     #appNewVersion=$(curl -fs https://macadmins.software/latest.xml | xpath '//latest/package[id="com.microsoft.intunecompanyportal.standalone"]/cfbundleshortversionstring' 2>/dev/null | sed -E 's/<cfbundleshortversionstring>([0-9.]*)<.*/\1/')
     appNewVersion=$(curl -fsIL "$downloadURL" | grep -i location: | grep -o "/CompanyPortal_.*pkg" | cut -d "_" -f 2 | cut -d "-" -f 1)
     expectedTeamID="UBF8T346G9"
@@ -9236,7 +9304,16 @@ if [[ "$type" != "updateronly" && ($INSTALL == "force" || $IGNORE_APP_STORE_APPS
 fi
 if [[ -n $appNewVersion ]]; then
     printlog "Latest version of $name is $appNewVersion"
-    if [[ $appversion == $appNewVersion ]]; then
+
+    if [[ $ADVANCED_VERSION_COMPARISON == "yes" ]]; then
+        printlog "Performing advanced version comparison for $appversion and $appNewVersion"
+        shouldupdate=$(versionCompare $appversion $appNewVersion)
+        printlog "Should update according to advancedversioncomparison: $shouldupdate"
+    else
+        shouldupdate=true
+    fi
+
+    if [[ $appversion == $appNewVersion ]] || [ $shouldupdate = false ]; then
         if [[ $DEBUG -ne 1 ]]; then
             printlog "There is no newer version available."
             if [[ $INSTALL != "force" ]]; then

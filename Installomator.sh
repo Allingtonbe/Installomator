@@ -348,7 +348,7 @@ if [[ $(/usr/bin/arch) == "arm64" ]]; then
     fi
 fi
 VERSION="10.6.1"
-VERSIONDATE="2024-09-05"
+VERSIONDATE="2024-09-06"
 
 # MARK: Functions
 
@@ -9307,7 +9307,7 @@ if [[ -n $appNewVersion ]]; then
 
     if [[ $ADVANCED_VERSION_COMPARISON == "yes" ]]; then
         printlog "Performing advanced version comparison for $appversion and $appNewVersion"
-        shouldupdate=$(versionCompare $appversion $appNewVersion)
+        shouldupdate=$(versionCompare "$appversion" "$appNewVersion")
         printlog "Should update according to advanced version comparison: $shouldupdate"
     else
         shouldupdate=true

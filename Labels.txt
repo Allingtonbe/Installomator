@@ -555,7 +555,6 @@ microsoftteamsreset
 microsoftvisualstudiocode
 microsoftwindowsapp
 microsoftword
-microsoftwordreset
 midimonitor
 mightymike
 mindmanager

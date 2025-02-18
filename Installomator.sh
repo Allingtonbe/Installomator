@@ -333,6 +333,16 @@ datadogAPI=""
 # Simply add your own API key for this in order to have logs sent to Datadog
 # See more here: https://www.datadoghq.com/product/log-management/
 
+# Advanced version comparison
+ADVANCED_VERSION_COMPARISON=""
+# options:
+#   - yes   Use more advanced version comparison.
+# By default Installomator will allways attempt to update an application if the installed
+# version is different from the version found online, even if the installed version is 
+# higher. This option will not perform an update if the installed version is higher.
+# Note: Version comparison only works for version formats containing numbers and dots.
+# If any other character is found, it will use the default version comparison.
+
 # Log Date format used when parsing logs for debugging, this is the default used by
 # install.log, override this in the case statements if you need something custom per
 # application (See adobeillustrator).  Using stadard GNU Date formatting.
@@ -347,6 +357,7 @@ if [[ $(/usr/bin/arch) == "arm64" ]]; then
         rosetta2=no
     fi
 fi
+
 VERSION="10.8beta"
 VERSIONDATE="2025-02-12"
 
@@ -1406,6 +1417,65 @@ updateDialog() {
             echo "listitem: title: $listitem, statustext: $message, status: $state" >> $cmd_file
         fi
     fi
+}
+
+versionCompare() {
+    # Compare 2 versions.
+    # The first argument needs to be the currently installed version.
+    # The second argument is the version to check against.
+    # Return true if the second arugment is a higher version than the first.
+    # Otherwise return false.
+
+    # If versions are the same no update is necessary
+    if [ "$1" = "$2" ]; then
+        echo false
+        return
+    fi
+
+    # Version comparison only supports digits and dots. We should perform an update if the version contains other characters.
+    version1check=$(echo $1 | grep -o "[0-9\.]*")
+    version2check=$(echo $2 | grep -o "[0-9\.]*")
+    if [ "$1" != "$version1check" ] || [ "$2" != "$version2check" ]; then
+        echo true
+        return
+    fi
+
+    # Get the length of the longest version
+    version1length=$(echo $1 | tr -cd . | wc -c | tr -d " ")
+    version2length=$(echo $2 | tr -cd . | wc -c | tr -d " ")
+    if [ $version1length -gt $version2length ]; then
+        length=$version1length
+    else
+        length=$version2length
+    fi
+    length=$(($length + 1))
+
+    # Compare each segment of the versions
+    for ((i=1; i<=$length; i++)); do
+        # Cut the version strings up and get the ith part.
+        # Added a . to handle versions without one. The cut command would always return the full version otherwise.
+        part1=$(echo "$1." | cut -d "." -f $i)
+        part2=$(echo "$2." | cut -d "." -f $i)
+
+        # Make it 0 if the segment is empty.
+        if [[ -z $part1 ]]; then
+            part1=0
+        fi
+        if [[ -z $part2 ]]; then
+            part2=0
+        fi
+
+        if [ $part1 -gt $part2 ]; then
+            echo false
+            return
+        elif [ $part1 -lt $part2 ]; then
+            echo true
+            return
+        fi
+    done
+
+    echo true
+    return
 }
 
 # NOTE: check minimal macOS requirement
@@ -4261,7 +4331,6 @@ filezilla)
     expectedTeamID="5VPGKXL75N"
     blockingProcesses=( NONE )
     ;;
-    
 finaldraft11)
     name="Final Draft 11"
     type="pkgInZip"
@@ -6458,6 +6527,7 @@ microsoftcompanyportal)
     name="Company Portal"
     type="pkg"
     downloadURL="https://go.microsoft.com/fwlink/?linkid=853070"
+    appNewVersion=$(curl -fsIL "$downloadURL" | grep -i location: | grep -o "/CompanyPortal_.*pkg" | cut -d "_" -f 2 | cut -d "-" -f 1)
     expectedTeamID="UBF8T346G9"
     if [[ -x "/Library/Application Support/Microsoft/MAU2.0/Microsoft AutoUpdate.app/Contents/MacOS/msupdate" && $INSTALL != "force" && $DEBUG -eq 0 ]]; then
         printlog "Running msupdate --list"
@@ -6494,8 +6564,8 @@ microsoftexcel)
     name="Microsoft Excel"
     type="pkg"
     downloadURL="https://go.microsoft.com/fwlink/?linkid=525135"
-    #appNewVersion=$(curl -fs https://macadmins.software/latest.xml | xpath '//latest/package[id="com.microsoft.excel.standalone.365"]/cfbundleshortversionstring' 2>/dev/null | sed -E 's/<cfbundleshortversionstring>([0-9.]*)<.*/\1/')
-    appNewVersion=$(curl -fsIL "$downloadURL" | grep -i location: | grep -o "/Microsoft_.*pkg" | cut -d "_" -f 3 | cut -d "." -f 1-2)
+    versionKey="CFBundleVersion"
+    appNewVersion=$(curl -fsIL "$downloadURL" | grep -i location: | grep -o "/Microsoft_.*pkg" | cut -d "_" -f 3)
     expectedTeamID="UBF8T346G9"
     if [[ -x "/Library/Application Support/Microsoft/MAU2.0/Microsoft AutoUpdate.app/Contents/MacOS/msupdate" && $INSTALL != "force" && $DEBUG -eq 0 ]]; then
         printlog "Running msupdate --list"
@@ -6503,8 +6573,7 @@ microsoftexcel)
     fi
     updateTool="/Library/Application Support/Microsoft/MAU2.0/Microsoft AutoUpdate.app/Contents/MacOS/msupdate"
     updateToolArguments=( --install --apps XCEL2019 )
-    ;;
-microsoftexcelreset)
+    ;;microsoftexcelreset)
     name="Microsoft Excel Reset"
     type="pkg"
     packageID="com.microsoft.reset.Excel"
@@ -6669,8 +6738,8 @@ microsoftonenote)
     name="Microsoft OneNote"
     type="pkg"
     downloadURL="https://go.microsoft.com/fwlink/?linkid=820886"
-    #appNewVersion=$(curl -fs https://macadmins.software/latest.xml | xpath '//latest/package[id="com.microsoft.onenote.standalone.365"]/cfbundleshortversionstring' 2>/dev/null | sed -E 's/<cfbundleshortversionstring>([0-9.]*)<.*/\1/')
-    appNewVersion=$(curl -fsIL "$downloadURL" | grep -i location: | grep -o "/Microsoft_.*pkg" | cut -d "_" -f 3 | cut -d "." -f 1-2)
+    versionKey="CFBundleVersion"
+    appNewVersion=$(curl -fsIL "$downloadURL" | grep -i location: | grep -o "/Microsoft_.*pkg" | cut -d "_" -f 3)
     expectedTeamID="UBF8T346G9"
     if [[ -x "/Library/Application Support/Microsoft/MAU2.0/Microsoft AutoUpdate.app/Contents/MacOS/msupdate" && $INSTALL != "force" && $DEBUG -eq 0 ]]; then
         printlog "Running msupdate --list"
@@ -6678,8 +6747,7 @@ microsoftonenote)
     fi
     updateTool="/Library/Application Support/Microsoft/MAU2.0/Microsoft AutoUpdate.app/Contents/MacOS/msupdate"
     updateToolArguments=( --install --apps ONMC2019 )
-    ;;
-microsoftonenotereset)
+    ;;microsoftonenotereset)
     name="Microsoft OneNote Reset"
     type="pkg"
     packageID="com.microsoft.reset.OneNote"
@@ -6705,9 +6773,9 @@ microsoftoutlook-monthly)
 microsoftoutlook)
     name="Microsoft Outlook"
     type="pkg"
-    downloadURL="https://go.microsoft.com/fwlink/?linkid=525137"
-    #appNewVersion=$(curl -fs https://macadmins.software/latest.xml | xpath '//latest/package[id="com.microsoft.outlook.standalone.365"]/cfbundleshortversionstring' 2>/dev/null | sed -E 's/<cfbundleshortversionstring>([0-9.]*)<.*/\1/')
-    appNewVersion=$(curl -fsIL "$downloadURL" | grep -i location: | grep -o "/Microsoft_.*pkg" | cut -d "_" -f 3 | cut -d "." -f 1-2)
+    downloadURL=$(curl -fsL "https://learn.microsoft.com/en-us/officeupdates/update-history-office-for-mac" | grep -Eo "https:\/\/officecdn.microsoft.com\/pr\/.*\/MacAutoupdate\/Microsoft_Outlook_.*_Updater.pkg" | head -1)
+    versionKey="CFBundleVersion"
+    appNewVersion=$(echo $downloadURL | cut -d "/" -f 7 | cut -d "_" -f 3)
     expectedTeamID="UBF8T346G9"
     if [[ -x "/Library/Application Support/Microsoft/MAU2.0/Microsoft AutoUpdate.app/Contents/MacOS/msupdate" && $INSTALL != "force" && $DEBUG -eq 0 ]]; then
         printlog "Running msupdate --list"
@@ -6715,8 +6783,7 @@ microsoftoutlook)
     fi
     updateTool="/Library/Application Support/Microsoft/MAU2.0/Microsoft AutoUpdate.app/Contents/MacOS/msupdate"
     updateToolArguments=( --install --apps OPIM2019 )
-    ;;
-microsoftoutlookdataremoval)
+    ;;microsoftoutlookdataremoval)
     name="Microsoft Outlook Data Removal"
     type="pkg"
     packageID="com.microsoft.remove.Outlook.Data"
@@ -6734,8 +6801,8 @@ microsoftpowerpoint)
     name="Microsoft PowerPoint"
     type="pkg"
     downloadURL="https://go.microsoft.com/fwlink/?linkid=525136"
-    #appNewVersion=$(curl -fs https://macadmins.software/latest.xml | xpath '//latest/package[id="com.microsoft.powerpoint.standalone.365"]/cfbundleshortversionstring' 2>/dev/null | sed -E 's/<cfbundleshortversionstring>([0-9.]*)<.*/\1/')
-    appNewVersion=$(curl -fsIL "$downloadURL" | grep -i location: | grep -o "/Microsoft_.*pkg" | cut -d "_" -f 3 | cut -d "." -f 1-2)
+    versionKey="CFBundleVersion"
+    appNewVersion=$(curl -fsIL "$downloadURL" | grep -i location: | grep -o "/Microsoft_.*pkg" | cut -d "_" -f 3)
     expectedTeamID="UBF8T346G9"
     if [[ -x "/Library/Application Support/Microsoft/MAU2.0/Microsoft AutoUpdate.app/Contents/MacOS/msupdate" && $INSTALL != "force" && $DEBUG -eq 0 ]]; then
         printlog "Running msupdate --list"
@@ -6743,8 +6810,7 @@ microsoftpowerpoint)
     fi
     updateTool="/Library/Application Support/Microsoft/MAU2.0/Microsoft AutoUpdate.app/Contents/MacOS/msupdate"
     updateToolArguments=( --install --apps PPT32019 )
-    ;;
-microsoftpowerpointreset)
+    ;;microsoftpowerpointreset)
     name="Microsoft PowerPoint Reset"
     type="pkg"
     packageID="com.microsoft.reset.PowerPoint"
@@ -6887,8 +6953,8 @@ microsoftword)
     name="Microsoft Word"
     type="pkg"
     downloadURL="https://go.microsoft.com/fwlink/?linkid=525134"
-    #appNewVersion=$(curl -fs https://macadmins.software/latest.xml | xpath '//latest/package[id="com.microsoft.word.standalone.365"]/cfbundleshortversionstring' 2>/dev/null | sed -E 's/<cfbundleshortversionstring>([0-9.]*)<.*/\1/')
-    appNewVersion=$(curl -fsIL "$downloadURL" | grep -i location: | grep -o "/Microsoft_.*pkg" | cut -d "_" -f 3 | cut -d "." -f 1-2)
+    versionKey="CFBundleVersion"
+    appNewVersion=$(curl -fsIL "$downloadURL" | grep -i location: | grep -o "/Microsoft_.*pkg" | cut -d "_" -f 3)
     expectedTeamID="UBF8T346G9"
     if [[ -x "/Library/Application Support/Microsoft/MAU2.0/Microsoft AutoUpdate.app/Contents/MacOS/msupdate" && $INSTALL != "force" ]]; then
         printlog "Running msupdate --list"
@@ -6896,8 +6962,7 @@ microsoftword)
     fi
     updateTool="/Library/Application Support/Microsoft/MAU2.0/Microsoft AutoUpdate.app/Contents/MacOS/msupdate"
     updateToolArguments=( --install --apps MSWD2019 )
-    ;;
-microsoftwordreset)
+    ;;microsoftwordreset)
     name="Microsoft Word Reset"
     type="pkg"
     packageID="com.microsoft.reset.Word"
@@ -10740,7 +10805,16 @@ if [[ "$type" != "updateronly" && ($INSTALL == "force" || $IGNORE_APP_STORE_APPS
 fi
 if [[ -n $appNewVersion ]]; then
     printlog "Latest version of $name is $appNewVersion"
-    if [[ $appversion == $appNewVersion ]]; then
+
+    if [[ $ADVANCED_VERSION_COMPARISON == "yes" ]]; then
+        printlog "Performing advanced version comparison for $appversion and $appNewVersion"
+        shouldupdate=$(versionCompare "$appversion" "$appNewVersion")
+        printlog "Should update according to advanced version comparison: $shouldupdate"
+    else
+        shouldupdate=true
+    fi
+
+    if [[ $appversion == $appNewVersion ]] || [ $shouldupdate = false ]; then
         if [[ $DEBUG -ne 1 ]]; then
             printlog "There is no newer version available."
             if [[ $INSTALL != "force" ]]; then

@@ -557,6 +557,7 @@ microsoftonedrivesuprod
 microsoftonenote
 microsoftoutlook
 microsoftoutlook-monthly
+microsoftoutlookdataremoval
 microsoftoutlookreset
 microsoftpowerpoint
 microsoftremotedesktop

@@ -541,7 +541,6 @@ microsoftedge
 microsoftedgeconsumerstable
 microsoftedgeenterprisestable
 microsoftexcel
-microsoftexcelreset
 microsoftlicenseremovaltool
 microsoftlicensereset
 microsoftoffice365
@@ -556,13 +555,11 @@ microsoftonedrivereset
 microsoftonedrivesuinsiders
 microsoftonedrivesuprod
 microsoftonenote
-microsoftonenotereset
 microsoftoutlook
 microsoftoutlook-monthly
 microsoftoutlookdataremoval
 microsoftoutlookreset
 microsoftpowerpoint
-microsoftpowerpointreset
 microsoftremotedesktop
 microsoftremotehelp
 microsoftsharepointplugin
@@ -576,7 +573,6 @@ microsoftteamsreset
 microsoftvisualstudiocode
 microsoftwindowsapp
 microsoftword
-microsoftwordreset
 midimonitor
 mightymike
 mindmanager

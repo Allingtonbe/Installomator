@@ -358,9 +358,8 @@ if [[ $(/usr/bin/arch) == "arm64" ]]; then
         rosetta2=no
     fi
 fi
-
-VERSION="10.9beta"
-VERSIONDATE="2025-04-22"
+VERSION="10.8.2"
+VERSIONDATE="2025-05-06"
 
 # MARK: Functions
 
@@ -6690,14 +6689,16 @@ microsoftedgeenterprisestable)
 microsoftexcel)
     name="Microsoft Excel"
     type="pkg"
-    downloadURL="https://go.microsoft.com/fwlink/?linkid=525135"
-    versionKey="CFBundleVersion"
-    appNewVersion=$(curl -fsIL "$downloadURL" | grep -i location: | grep -o "/Microsoft_.*pkg" | cut -d "_" -f 3)
+    MAUSource="https://officecdnmac.microsoft.com/pr/C1297A47-86C4-4C1F-97FA-950631F94777/MacAutoupdate/0409XCEL2019.xml"
+    downloadURL=$(curl -fsL $MAUSource | xmllint --xpath '//array/dict[1]/key[text()="FullUpdaterLocation"]/following-sibling::string[1]/text()' - | sed 's/_Updater/_Installer/' 2>/dev/null)
+    appNewVersion=$(curl -fsL $MAUSource | xmllint --xpath '//array/dict[1]/key[text()="Update Version"]/following-sibling::string[1]/text()' - | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' 2>/dev/null)
     expectedTeamID="UBF8T346G9"
+    versionKey="CFBundleVersion"
     if [[ -x "/Library/Application Support/Microsoft/MAU2.0/Microsoft AutoUpdate.app/Contents/MacOS/msupdate" && $INSTALL != "force" && $DEBUG -eq 0 ]]; then
         printlog "Running msupdate --list"
         "/Library/Application Support/Microsoft/MAU2.0/Microsoft AutoUpdate.app/Contents/MacOS/msupdate" --list
     fi
+    blockingProcesses=( "Microsoft Excel" )
     updateTool="/Library/Application Support/Microsoft/MAU2.0/Microsoft AutoUpdate.app/Contents/MacOS/msupdate"
     updateToolArguments=( --install --apps XCEL2019 )
     ;;microsoftexcelreset)
@@ -6864,14 +6865,16 @@ microsoftonedrivesuprod)
 microsoftonenote)
     name="Microsoft OneNote"
     type="pkg"
-    downloadURL="https://go.microsoft.com/fwlink/?linkid=820886"
-    versionKey="CFBundleVersion"
-    appNewVersion=$(curl -fsIL "$downloadURL" | grep -i location: | grep -o "/Microsoft_.*pkg" | cut -d "_" -f 3)
+    MAUSource="https://officecdnmac.microsoft.com/pr/C1297A47-86C4-4C1F-97FA-950631F94777/MacAutoupdate/0409ONMC2019.xml"
+    downloadURL=$(curl -fsL $MAUSource | xmllint --xpath '//array/dict[1]/key[text()="FullUpdaterLocation"]/following-sibling::string[1]/text()' - | sed 's/_Updater/_Installer/' 2>/dev/null)
+    appNewVersion=$(curl -fsL $MAUSource | xmllint --xpath '//array/dict[1]/key[text()="Update Version"]/following-sibling::string[1]/text()' - | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' 2>/dev/null)
     expectedTeamID="UBF8T346G9"
+    versionKey="CFBundleVersion"
     if [[ -x "/Library/Application Support/Microsoft/MAU2.0/Microsoft AutoUpdate.app/Contents/MacOS/msupdate" && $INSTALL != "force" && $DEBUG -eq 0 ]]; then
         printlog "Running msupdate --list"
         "/Library/Application Support/Microsoft/MAU2.0/Microsoft AutoUpdate.app/Contents/MacOS/msupdate" --list
     fi
+    blockingProcesses=( "Microsoft OneNote" )
     updateTool="/Library/Application Support/Microsoft/MAU2.0/Microsoft AutoUpdate.app/Contents/MacOS/msupdate"
     updateToolArguments=( --install --apps ONMC2019 )
     ;;microsoftonenotereset)
@@ -6900,14 +6903,16 @@ microsoftoutlook-monthly)
 microsoftoutlook)
     name="Microsoft Outlook"
     type="pkg"
-    downloadURL="https://go.microsoft.com/fwlink/?linkid=525137"
-    versionKey="CFBundleVersion"
-    appNewVersion=$(curl -fsIL "$downloadURL" | grep -i location: | grep -o "/Microsoft_.*pkg" | cut -d "_" -f 3)
+    MAUSource="https://officecdnmac.microsoft.com/pr/C1297A47-86C4-4C1F-97FA-950631F94777/MacAutoupdate/0409OPIM2019.xml"
+    downloadURL=$(curl -fsL $MAUSource | xmllint --xpath '//array/dict[1]/key[text()="FullUpdaterLocation"]/following-sibling::string[1]/text()' - | sed 's/_Updater/_Installer/' 2>/dev/null)
+    appNewVersion=$(curl -fsL $MAUSource | xmllint --xpath '//array/dict[1]/key[text()="Update Version"]/following-sibling::string[1]/text()' - | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' 2>/dev/null)
     expectedTeamID="UBF8T346G9"
+    versionKey="CFBundleVersion"
     if [[ -x "/Library/Application Support/Microsoft/MAU2.0/Microsoft AutoUpdate.app/Contents/MacOS/msupdate" && $INSTALL != "force" && $DEBUG -eq 0 ]]; then
         printlog "Running msupdate --list"
         "/Library/Application Support/Microsoft/MAU2.0/Microsoft AutoUpdate.app/Contents/MacOS/msupdate" --list
     fi
+    blockingProcesses=( "Microsoft Outlook" )
     updateTool="/Library/Application Support/Microsoft/MAU2.0/Microsoft AutoUpdate.app/Contents/MacOS/msupdate"
     updateToolArguments=( --install --apps OPIM2019 )
     ;;
@@ -6928,14 +6933,16 @@ microsoftoutlookreset)
 microsoftpowerpoint)
     name="Microsoft PowerPoint"
     type="pkg"
-    downloadURL="https://go.microsoft.com/fwlink/?linkid=525136"
-    versionKey="CFBundleVersion"
-    appNewVersion=$(curl -fsIL "$downloadURL" | grep -i location: | grep -o "/Microsoft_.*pkg" | cut -d "_" -f 3)
+    MAUSource="https://officecdnmac.microsoft.com/pr/C1297A47-86C4-4C1F-97FA-950631F94777/MacAutoupdate/0409PPT32019.xml"
+    downloadURL=$(curl -fsL $MAUSource | xmllint --xpath '//array/dict[1]/key[text()="FullUpdaterLocation"]/following-sibling::string[1]/text()' - | sed 's/_Updater/_Installer/' 2>/dev/null)
+    appNewVersion=$(curl -fsL $MAUSource | xmllint --xpath '//array/dict[1]/key[text()="Update Version"]/following-sibling::string[1]/text()' - | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' 2>/dev/null)
     expectedTeamID="UBF8T346G9"
+    versionKey="CFBundleVersion"
     if [[ -x "/Library/Application Support/Microsoft/MAU2.0/Microsoft AutoUpdate.app/Contents/MacOS/msupdate" && $INSTALL != "force" && $DEBUG -eq 0 ]]; then
         printlog "Running msupdate --list"
         "/Library/Application Support/Microsoft/MAU2.0/Microsoft AutoUpdate.app/Contents/MacOS/msupdate" --list
     fi
+    blockingProcesses=( "Microsoft PowerPoint" )
     updateTool="/Library/Application Support/Microsoft/MAU2.0/Microsoft AutoUpdate.app/Contents/MacOS/msupdate"
     updateToolArguments=( --install --apps PPT32019 )
     ;;microsoftpowerpointreset)
@@ -7075,14 +7082,16 @@ microsoftwindowsapp)
 microsoftword)
     name="Microsoft Word"
     type="pkg"
-    downloadURL="https://go.microsoft.com/fwlink/?linkid=525134"
-    versionKey="CFBundleVersion"
-    appNewVersion=$(curl -fsIL "$downloadURL" | grep -i location: | grep -o "/Microsoft_.*pkg" | cut -d "_" -f 3)
+    MAUSource="https://officecdnmac.microsoft.com/pr/C1297A47-86C4-4C1F-97FA-950631F94777/MacAutoupdate/0409MSWD2019.xml"
+    downloadURL=$(curl -fsL $MAUSource | xmllint --xpath '//array/dict[1]/key[text()="FullUpdaterLocation"]/following-sibling::string[1]/text()' - | sed 's/_Updater/_Installer/' 2>/dev/null)
+    appNewVersion=$(curl -fsL $MAUSource | xmllint --xpath '//array/dict[1]/key[text()="Update Version"]/following-sibling::string[1]/text()' - | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' 2>/dev/null)
     expectedTeamID="UBF8T346G9"
+    versionKey="CFBundleVersion"
     if [[ -x "/Library/Application Support/Microsoft/MAU2.0/Microsoft AutoUpdate.app/Contents/MacOS/msupdate" && $INSTALL != "force" ]]; then
         printlog "Running msupdate --list"
         "/Library/Application Support/Microsoft/MAU2.0/Microsoft AutoUpdate.app/Contents/MacOS/msupdate" --list
     fi
+    blockingProcesses=( "Microsoft Word" )
     updateTool="/Library/Application Support/Microsoft/MAU2.0/Microsoft AutoUpdate.app/Contents/MacOS/msupdate"
     updateToolArguments=( --install --apps MSWD2019 )
     ;;microsoftwordreset)

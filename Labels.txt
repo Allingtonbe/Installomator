@@ -554,6 +554,7 @@ microsoftonedrivereset
 microsoftonedrivesuinsiders
 microsoftonedrivesuprod
 microsoftonenote
+microsoftonenotereset
 microsoftoutlook
 microsoftoutlook-monthly
 microsoftoutlookdataremoval

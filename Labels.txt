@@ -58,6 +58,7 @@ ape
 apparency
 appcleaner
 applenyfonts
+appleprovideoformats
 applesfarabic
 applesfcompact
 applesfmono
@@ -239,6 +240,7 @@ deon-onprem
 depnotify
 desktoppr
 detectxswift
+determinate
 devonthink
 dialog
 dialpad
@@ -247,7 +249,6 @@ discord
 diskdrill
 diskspace
 displaylinkmanager
-displaylinkmanagergraphicsconnectivity
 docker
 dockutil
 dragonframe5
@@ -955,7 +956,6 @@ vivaldi
 vivi
 vlc
 vmwarefusion
-vmwarehorizonclient
 vncconnect
 vonagebusiness
 vpntracker365
@@ -963,6 +963,7 @@ vscodium
 vysor
 wacomdrivers
 wallyezflash
+warp
 wavescentral
 weasis
 webex

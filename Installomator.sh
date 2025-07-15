@@ -358,9 +358,8 @@ if [[ $(/usr/bin/arch) == "arm64" ]]; then
         rosetta2=no
     fi
 fi
-
-VERSION="10.9beta"
-VERSIONDATE="2025-06-24"
+VERSION="10.8.3"
+VERSIONDATE="2025-07-15"
 
 # MARK: Functions
 
@@ -9617,7 +9616,7 @@ teamviewer)
     versionKey="CFBundleShortVersionString"
     pkgName="Install TeamViewer.app/Contents/Resources/Install TeamViewer.pkg"
     downloadURL="https://download.teamviewer.com/download/TeamViewer.dmg"
-    appNewVersion=$(curl -fsL "https://www.teamviewer.com/en/download/macos/" | grep "Current version" | awk -F': ' '{ print $2 }' | sed 's/<[^>]*>//g')
+    appNewVersion=$(curl -fsL "https://www.teamviewer.com/en-US/download/portal/macos/" | grep "Current version" | awk -F': ' '{ print $2 }' | sed 's/<[^>]*>//g')
     expectedTeamID="H7UGFBUGV6"
     ;;
 teamviewerhost)

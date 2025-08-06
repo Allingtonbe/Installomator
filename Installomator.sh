@@ -358,8 +358,9 @@ if [[ $(/usr/bin/arch) == "arm64" ]]; then
         rosetta2=no
     fi
 fi
-VERSION="10.8.3"
-VERSIONDATE="2025-07-15"
+
+VERSION="10.9beta"
+VERSIONDATE="2025-07-16"
 
 # MARK: Functions
 
@@ -3646,8 +3647,9 @@ cursorai)
 cyberduck)
     name="Cyberduck"
     type="zip"
-    downloadURL=$(curl -fs https://version.cyberduck.io/changelog.rss | xpath '//rss/channel/item/enclosure/@url' 2>/dev/null | cut -d '"' -f 2 )
-    appNewVersion=$(curl -fs https://version.cyberduck.io/changelog.rss | xpath '//rss/channel/item/enclosure/@sparkle:shortVersionString' 2>/dev/null | cut -d '"' -f 2 )
+    changeLOG="$( curl -fs https://version.cyberduck.io/changelog.rss )"
+    downloadURL=$( echo "$changeLOG" | sed 's/sparkle://g' | xmllint --xpath 'string(//item/enclosure/@url)' - 2>/dev/null)
+    appNewVersion=$( echo "$changeLOG" | sed 's/sparkle://g' | xmllint --xpath 'string(//item/enclosure/@shortVersionString)' - 2>/dev/null)
     expectedTeamID="G69SCX94XU"
     ;;
 cycling74max)

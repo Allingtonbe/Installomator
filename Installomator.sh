@@ -358,6 +358,7 @@ if [[ $(/usr/bin/arch) == "arm64" ]]; then
         rosetta2=no
     fi
 fi
+
 VERSION="10.8.3"
 VERSIONDATE="2025-08-06"
 

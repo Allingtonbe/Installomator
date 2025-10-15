@@ -537,6 +537,7 @@ microsoftdefenderatp
 microsoftedge
 microsoftedgeconsumerstable
 microsoftedgeenterprisestable
+microsoftexcel
 microsoftlicenseremovaltool
 microsoftlicensereset
 microsoftoffice365

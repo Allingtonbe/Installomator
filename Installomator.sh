@@ -6169,7 +6169,7 @@ logitechoptionsplus)
     name="Logi Options+"
     appName="logioptionsplus.app"
     archiveName="logioptionsplus_installer.zip"
-    installerTool="Logi Options+ Installer.app"
+    installerTool="logioptionsplus_installer.app"
     type="zip"
     downloadURL="https://download01.logi.com/web/ftp/pub/techsupport/optionsplus/logioptionsplus_installer.zip"
     # Latest version of Logi Options+ requires macOS 12+

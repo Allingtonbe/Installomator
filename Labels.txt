@@ -687,6 +687,7 @@ openrefine
 openvpnconnect
 openvpnconnectv3
 opera
+oraclesqldeveloper
 orbstack
 orcaslicer
 origin

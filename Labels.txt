@@ -111,6 +111,7 @@ basictex
 bbedit
 bbeditpkg
 beamstudio
+beidtoken
 betterdisplay
 bettertouchtool
 beyondcomparepro
@@ -298,7 +299,7 @@ ecosiabrowser
 editshare-connect
 egnytecore
 egnytewebedit
-elasticvue
+eidviewer
 element
 elevate24
 elgatocamerahub

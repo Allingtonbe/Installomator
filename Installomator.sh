@@ -358,8 +358,8 @@ if [[ $(/usr/bin/arch) == "arm64" ]]; then
         rosetta2=no
     fi
 fi
-VERSION="10.9beta"
-VERSIONDATE="2025-12-23"
+VERSION="10.8.7"
+VERSIONDATE="2026-02-10"
 
 # MARK: Functions
 
@@ -2816,6 +2816,13 @@ beamstudio)
     downloadURL="$( curl -s "https://id.flux3dp.com/api/check-update?key=beamstudio-stable" | tr '"' '\n' | grep -m1 dmg )"
     appNewVersion="$( echo "$downloadURL" | cut -d '+' -f 3 | cut -d '.' -f 1-3 )"
     ;;
+beidtoken)
+    name="BEIDToken"
+    type="pkgInDmg"
+    downloadURL="$(curl -fsL https://eid.belgium.be/en/download/16/license | grep -o 'https:\/\/eid\.belgium\.be\/sites\/default\/files\/software\/eID-Quickinstaller-[0-9/.]*dmg')"
+    appNewVersion="$(echo $downloadURL | grep -o '[0-9/.]*dmg' | sed 's/....$//')"
+    expectedTeamID="EU27N85PBZ"
+    ;;
 betterdisplay)
     name="BetterDisplay"
     type="dmg"
@@ -4547,7 +4554,13 @@ egnytewebedit)
     blockingProcesses=( NONE )
     ;;
     
-elasticvue)
+eidviewer)
+    name="eID Viewer"
+    type="dmg"
+    downloadURL="$(curl -fsL https://eid.belgium.be/en/download/22/license | grep -o 'https:\/\/eid\.belgium\.be\/sites\/default\/files\/software\/eID%20Viewer-[0-9/.]*dmg')"
+    appNewVersion="$(echo $downloadURL | grep -o '[0-9/.]*dmg' | sed 's/....$//')"
+    expectedTeamID="EU27N85PBZ"
+    ;;elasticvue)
     name="elasticvue"
     type="dmg"
     downloadURL="$(downloadURLFromGit cars10 elasticvue)"

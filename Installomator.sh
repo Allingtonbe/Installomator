@@ -359,7 +359,7 @@ if [[ $(/usr/bin/arch) == "arm64" ]]; then
     fi
 fi
 VERSION="10.8.8"
-VERSIONDATE="2026-04-22"
+VERSIONDATE="2026-04-23"
 
 # MARK: Functions
 
@@ -5933,6 +5933,7 @@ iterm2)
     downloadURL="https://iterm2.com/downloads/stable/latest"
     appNewVersion=$(curl -is https://iterm2.com/downloads/stable/latest | grep location: | grep -o "iTerm2.*zip" | cut -d "-" -f 2 | cut -d '.' -f1 | sed 's/_/./g')
     expectedTeamID="H7V7XYVQ7D"
+    blockingProcesses=( "iTerm" "iTerm2" )
     ;;
 itsycal|\
 mowgliiitsycal)
@@ -9424,8 +9425,8 @@ royaltsx)
 rstudio)
     name="RStudio"
     type="dmg"
-    downloadURL=$(curl -s -L "https://posit.co/download/rstudio-desktop/" | grep -m 1 -Eio 'href="https://download1.rstudio.org/electron/macos/RStudio-(.*).dmg"' | cut -c7- | sed -e 's/"$//')
-    appNewVersion=$( echo "${downloadURL}" | sed -E 's/.*\/[a-zA-Z]*-([0-9.-]*)\..*/\1/g' | sed 's/-/+/' )
+    downloadURL=$(curl -s -L "https://live-rstudio.pantheonsite.io/download/rstudio-desktop/?posit_iframe=1&initialWidth=1216&childId=rstudio-desktop&parentTitle=Download%20RStudio%20Desktop%20%7C%20Open%20Source%20IDE%20for%20R%20%26%20Python&parentUrl=https%3A%2F%2Fposit.co%2Fdownload%2Frstudio-desktop" | grep -m 1 -Eio 'href="https://download1.rstudio.org/electron/macos/RStudio-(.*).dmg"' | cut -c7- | sed -e 's/"$//')
+    appNewVersion=$(curl -sfI "$downloadURL" | grep -i "^location" | grep -oE '[0-9]{4}\.[0-9]{2}\.[0-9]{1,2}\-[0-9]+' | sed 's/-/+/')
     expectedTeamID="FYF2F5GFX4"
     ;;
 rustdesk)

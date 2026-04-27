@@ -17,7 +17,7 @@ citrixworkspace)
             "string(//div[@class='ctx-dl-content']/p[starts-with(., 'Version')])" \
             2>/dev/null <(print "$htmlDocument")
     }
-    appNewVersion=$(newVersionString | sed -nE 's/.*Version ([0-9.]+).*/\1/p')
+    appNewVersion=$(newVersionString | sed -nE 's/.*Version[[:space:]]+([0-9.]+).*/\1/p')
     versionKey="CitrixVersionString"
     expectedTeamID="S272Y5R93J"
     ;;

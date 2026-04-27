@@ -359,7 +359,7 @@ if [[ $(/usr/bin/arch) == "arm64" ]]; then
     fi
 fi
 VERSION="10.8.8"
-VERSIONDATE="2026-04-24"
+VERSIONDATE="2026-04-27"
 
 # MARK: Functions
 
@@ -3721,7 +3721,7 @@ citrixworkspace)
             "string(//div[@class='ctx-dl-content']/p[starts-with(., 'Version')])" \
             2>/dev/null <(print "$htmlDocument")
     }
-    appNewVersion=$(newVersionString | sed -nE 's/.*Version ([0-9.]+).*/\1/p')
+    appNewVersion=$(newVersionString | sed -nE 's/.*Version[[:space:]]+([0-9.]+).*/\1/p')
     versionKey="CitrixVersionString"
     expectedTeamID="S272Y5R93J"
     ;;

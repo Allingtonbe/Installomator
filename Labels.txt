@@ -957,6 +957,7 @@ teamviewer
 teamviewerhost
 teamviewerhostcustom
 teamviewerqs
+teamviewerqsallington
 teamviewerqscustom
 teamwire
 techsmithcapture

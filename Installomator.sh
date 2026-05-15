@@ -358,8 +358,8 @@ if [[ $(/usr/bin/arch) == "arm64" ]]; then
         rosetta2=no
     fi
 fi
-VERSION="10.9beta"
-VERSIONDATE="2026-05-14"
+VERSION="10.9"
+VERSIONDATE="2026-05-15"
 
 # MARK: Functions
 
@@ -1679,23 +1679,6 @@ valuesfromarguments)
     appNewVersion=$(curl -fs -L 'https://support-portal.8x8.com/helpcenter/viewArticle.html?d=8bff4970-6fbf-4daf-842d-8ae9b533153d' | grep -m 1 -o "https.*dmg" | sed 's/\"//' | awk '{print $1}' | sed -E 's/.*-v([0-9\.]*)[-\.]*.*/\1/' )
     expectedTeamID="FC967L3QRG"
     ;;
-ape)
-    name="ApE"
-    type="dmg"
-    downloadURL="https://jorgensen.biology.utah.edu/wayned/ape/Download/Mac/ApE_OSX_modern_current.dmg"
-    appNewVersion="$(curl -fsL "https://jorgensen.biology.utah.edu/wayned/ape/" | grep -Eo 'ApE \(v[0-9]+\.[0-9]+\.[0-9]+' | sed -E 's/ApE \(v//')"
-    expectedTeamID="F5459JB4SG"
-    appName="ApE.app"
-    blockingProcesses=( "ApE" )
-    ;;
-dcp-o-matic|dcpomatic|dcp-o-matic2|dcpomatic2)
-    name="DCP-o-matic 2"
-    type="dmg"
-    appNewVersion=$(curl -fs https://dcpomatic.com/download | grep "Stable release: " | awk -F '</p>' '{print $1}' | grep -o -e "[0-9.]*")
-    downloadURL="https://dcpomatic.com/dl.php?id=osx-10.10-main&version=$appNewVersion&paid=0"
-	versionKey="CFBundleVersion"
-    expectedTeamID="R82DXSR997"
-    ;;
 hudlsportscode)
     name="Hudl Sportscode"
     type="appInDmgInZip"
@@ -1912,8 +1895,10 @@ adobecreativeclouddesktop)
 adobedigitaleditions)
     name="Adobe Digital Editions"
     type="pkgInDmg"
-    downloadURL=$(curl -fs https://www.adobe.com/solutions/ebook/digital-editions/download.html | grep -oE 'https[^"]+\.dmg')
-    appNewVersion=$(curl -fs https://www.adobe.com/solutions/ebook/digital-editions/download.html | grep -o 'Adobe Digital Editions.*Installers' | awk -F' ' '{ print $4 }')
+    packageID="com.adobe.digitaleditions"
+    downloadPage=$(curl -fsL "https://www.adobe.com/solutions/ebook/digital-editions/download.html")
+    downloadURL=$(echo "$downloadPage" | grep -oE 'https://[^"'\''[:space:]]*\.dmg' | grep -v "\.exe" | head -1)
+    appNewVersion=$(echo "$downloadPage" | grep -o 'Adobe Digital Editions.*Installers' | awk -F' ' '{ print $4 }')
     expectedTeamID="JQ525L2MZD"
     ;;
 adobereaderdc|\
@@ -2849,6 +2834,18 @@ beamstudio)
     downloadURL="$( curl -s "https://id.flux3dp.com/api/check-update?key=beamstudio-stable" | tr '"' '\n' | grep -m1 dmg )"
     appNewVersion="$( echo "$downloadURL" | cut -d '+' -f 3 | cut -d '.' -f 1-3 )"
     ;;
+beekeeperstudio)
+    name="Beekeeper Studio"
+    type="dmg"
+    appNewVersion="$(versionFromGit beekeeper-studio beekeeper-studio)"
+    if [[ $(arch) == "arm64" ]]; then
+        archiveName="Beekeeper-Studio-${appNewVersion}-arm64.dmg"
+    else
+        archiveName="Beekeeper-Studio-${appNewVersion}.dmg"
+    fi
+    downloadURL="$(downloadURLFromGit beekeeper-studio beekeeper-studio)"
+    expectedTeamID="7KK583U8H2"
+    ;;
 beidtoken)
     name="BEIDToken"
     type="pkgInDmg"
@@ -2989,7 +2986,9 @@ boop)
 boxdrive)
     name="Box"
     type="pkg"
-    downloadURL="https://e3.boxcdn.net/desktop/releases/mac/BoxDrive.pkg"
+    packageID="com.box.desktop.installer.desktop"
+    appNewVersion=$(curl -fsL "https://formulae.brew.sh/api/cask/box-drive.json" | grep -o '"version":"[^"]*"' | head -1 | cut -d'"' -f4 | cut -d',' -f1)
+    downloadURL="https://e3.boxcdn.net/desktop/releases/mac/BoxDrive-${appNewVersion}.pkg"
     expectedTeamID="M683GB7CPW"
     ;;
 boxsync)
@@ -3915,10 +3914,10 @@ codemeter)
     archiveName="CmInstall.pkg"
     appCustomVersion(){ defaults read "/Applications/Codemeter.app/Contents/Info.plist" CFBundleVersion | cut -d '.' -f 1-2 }
     html_page_source="https://www.wibu.com/de/support/anwendersoftware/anwendersoftware.html"
-    macos_value=$(curl -fs $html_page_source | xmllint --html --format - 2>/dev/null | grep -Eo -m1 ' 12"> <option value=".*?"' | cut -d '"' -f3)
+    macos_value=$(curl -fs "$html_page_source" | xmllint --html --recover --nowarning --xpath 'string((//optgroup[starts-with(@label,"macOS")])[1]/option[1]/@value)' - 2>/dev/null;)
     downloadHTML="https://www.wibu.com/de/support/anwendersoftware/anwendersoftware/file/download/$macos_value.html"
     downloadURL="https://www.wibu.com"$(curl -fs $downloadHTML | xmllint --html --format - 2>/dev/null | grep -Eo 'rel="nofollow" href=".*?"' | cut -d '"' -f4)
-    appNewVersion=$(curl -fs $html_page_source | xmllint --html --format - 2>/dev/null | grep -Eo "option value=\"$macos_value\" style=\"\">Version .*?\"" | sed -E 's/.*Version (.*) \| 2.*/\1/g')
+    appNewVersion=$(curl -fs "$html_page_source" | xmllint --html --format - 2>/dev/null | grep -Eo "option value=\"$macos_value\" style=\"\">Version .*?\"" | sed -E 's/.*Version ([0-9]+\.[0-9]+).*/\1/')
     expectedTeamID="2SE7W37452"
     ;;
 coderunner)
@@ -4330,9 +4329,9 @@ diskspace)
 displaylinkmanager)
     name="DisplayLink Manager"
     type="pkg"
-    #packageID="com.displaylink.displaylinkmanagerapp"
-    downloadURL=https://www.synaptics.com$(redirect=$(curl -sfL https://www.synaptics.com/products/displaylink-graphics/downloads/macos | grep -m 1 'class="download-link">Download' | sed 's/.*href="//' | sed 's/".*//') && curl -sfL "https://www.synaptics.com$redirect" | grep 'class="no-link"' | awk -F 'href="' '{print $2}' | awk -F '"' '{print $1}')
-    appNewVersion=$(curl -sfL https://www.synaptics.com/products/displaylink-graphics/downloads/macos | grep -m 1 "Release:" | cut -d ' ' -f2)
+    appNewVersion=$(curl -sfL https://www.synaptics.com/products/displaylink-graphics/downloads/macos | grep -o 'DisplayLink%20Manager%20Graphics%20Connectivity[0-9.]*-Release' | head -1 | sed 's/DisplayLink%20Manager%20Graphics%20Connectivity//' | sed 's/-Release//')
+    productPage=$(curl -sfL https://www.synaptics.com/products/displaylink-graphics/downloads/macos | grep -o 'href="/products/displaylink-manager-graphics-connectivity-[^"]*?filetype=exe"' | head -1 | sed 's/href="//' | sed 's/"$//' | sed 's/?filetype=exe/?filetype=pkg/')
+    downloadURL="https://www.synaptics.com$(curl -sfL "https://www.synaptics.com${productPage}" | grep -o '/sites/default/files/exe_files/[^"]*\.pkg' | head -1)"
     expectedTeamID="73YQY62QM3"
     ;;
     displaynote)
@@ -4736,7 +4735,13 @@ egnytewebedit)
     blockingProcesses=( NONE )
     ;;
     
-elan)
+eidviewer)
+    name="eID Viewer"
+    type="dmg"
+    downloadURL="$(curl -fsL https://eid.belgium.be/en/download/22/license | grep -o 'https:\/\/eid\.belgium\.be\/sites\/default\/files\/software\/eID%20Viewer-[0-9/.]*dmg')"
+    appNewVersion="$(echo $downloadURL | grep -o '[0-9/.]*dmg' | sed 's/....$//')"
+    expectedTeamID="EU27N85PBZ"
+    ;;elan)
     elanVersion="$(curl -fs https://archive.mpi.nl/tla/elan/download | grep -o -m2 "ELAN_*.*_mac.dmg" | sed -n '1p' | cut -d "_" -f2)"
     appNewVersion="${elanVersion:0:1}.${elanVersion:2:1}"
     expectedTeamID="P7N398ZW7F"
@@ -5153,6 +5158,16 @@ firecutforpremierepro)
     expectedTeamID="7ASRSVAEMS"
     blockingProcesses=( "Adobe Premiere Pro 2024" "Adobe Premiere Pro 2025" "Adobe Premiere Pro 2026" "Adobe Premiere Pro 2027" )
     ;;
+firefox)
+    name="Firefox"
+    type="dmg"
+    downloadURL="https://download.mozilla.org/?product=firefox-latest&os=osx&lang=en-US"
+    firefoxVersions=$(curl -fs "https://product-details.mozilla.org/1.0/firefox_versions.json")
+    appNewVersion=$(getJSONValue "$firefoxVersions" "LATEST_FIREFOX_VERSION")
+    expectedTeamID="43AQ936H96"
+    blockingProcesses=( firefox )
+    printlog "WARNING for ERROR: Label firefox and firefox_intl should not be used. Instead use firefoxpkg and firefoxpkg_intl as per recommendations from Firefox. It's not fully certain that the app actually gets updated here. firefoxpkg and firefoxpkg_intl will have built in updates and make sure the client is updated in the future." REQ
+    ;;
 firefox_da)
     name="Firefox"
     type="dmg"
@@ -5233,6 +5248,15 @@ firefoxesrpkgintl)
     appNewVersion=$(getJSONValue "$firefoxVersions" "FIREFOX_ESR")
     appNewVersion=${appNewVersion:0:-3}
     expectedTeamID="43AQ936H96"
+    ;;
+firefoxpkg)
+    name="Firefox"
+    type="pkg"
+    downloadURL="https://download.mozilla.org/?product=firefox-pkg-latest-ssl&os=osx&lang=en-US"
+    firefoxVersions=$(curl -fs "https://product-details.mozilla.org/1.0/firefox_versions.json")
+    appNewVersion=$(getJSONValue "$firefoxVersions" "LATEST_FIREFOX_VERSION")
+    expectedTeamID="43AQ936H96"
+    blockingProcesses=( firefox )
     ;;
 firefoxpkg_intl)
     # This label will try to figure out the selected language of the user,
@@ -5776,6 +5800,16 @@ grandperspective)
     downloadURL="https://sourceforge.net/projects/grandperspectiv/files/latest/download"
     appNewVersion=$(curl -fs https://sourceforge.net/projects/grandperspectiv/files/grandperspective/ | grep -B 2 'Download Latest Version' | grep -oE '\/(\d|\.)+\/' | sed 's/\///g')
     expectedTeamID="3Z75QZGN66"
+    ;;
+granola)
+    name="Granola"
+    type="dmg"
+    # Uses Homebrew Cask API (does not require Homebrew installation)
+    # Most reliable as it's community-maintained and always up-to-date
+    granolaJSON=$(curl -fsL "https://formulae.brew.sh/api/cask/granola.json")
+    appNewVersion=$(getJSONValue "$granolaJSON" "version")
+    downloadURL=$(getJSONValue "$granolaJSON" "url")
+    expectedTeamID="QZ7DHHLN25"
     ;;
 graphicconverter10)
     name="GraphicConverter 10"
@@ -8882,9 +8916,9 @@ openvpnconnectv3)
 opera)
     name="Opera"
     type="dmg"
-    downloadURL="$(curl -fsIL $(curl -fsL $(curl -fsI "https://download.opera.com/download/get/?partner=www&opsys=MacOS" | grep -i "^location" | awk '{print $2}' | tr -d '\r') | grep -oE "https:\/\/download\.opera\.com\/[^\"]*" | sed 's/\&amp\;/\&/g') | grep -i "^location" | awk '{print $2}' | tr -d '\r')"
-    appNewVersion="$(printf "$downloadURL" | sed -E 's/https.*\/([0-9.]*)\/mac\/.*/\1/')"
-	versionKey="CFBundleVersion"
+    appNewVersion=$(curl -fs "https://get.geo.opera.com/pub/opera/desktop/" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+' | sort -V | tail -1)
+    downloadURL="https://get.geo.opera.com/pub/opera/desktop/${appNewVersion}/mac/Opera_${appNewVersion}_Setup.dmg"
+    versionKey="CFBundleVersion"
     expectedTeamID="A2P9LX4JPN"
     ;;
 orbstack)
@@ -11002,17 +11036,6 @@ teamviewerqsallington)
     appName="TeamViewerQS.app"
     expectedTeamID="H7UGFBUGV6"
     ;;
-teamviewerqsallington)
-    name="TeamViewerQS"
-    type="zip"
-    teamviewerCustomDownloadURL="https://get.teamviewer.com/bp3qnrz"
-    teamviewerConfigID=$(curl -fs ${teamviewerCustomDownloadURL} -H 'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36' | grep -o 'var configId = ".*"' | awk -F'"' '{ print $2 }')
-    teamviewerVersion=$(curl -fs ${teamviewerCustomDownloadURL} -H 'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36' | grep -o 'var version = ".*"' | awk -F'"' '{ print $2 }')
-    downloadURL=$(curl -fs -X POST --url "https://get.teamviewer.com/api/CustomDesign" --header 'Content-Type: application/json; charset=utf-8' -H 'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36' --data '{ "ConfigId": "'"$teamviewerConfigID"'", "Version": "'"$teamviewerVersion"'", "IsCustomModule": true, "Subdomain": "1", "ConnectionId": "" }' | tr -d '"')
-    appNewVersion=$(curl -fs "https://www.teamviewer.com/en/download/macos/" | grep 'data-json' | grep 'full' | awk -F '"' '{ print $4 }' | sed 's/&quot;/"/g' | plutil -extract "data.0.versionNumber" raw -o - -)
-    appName="TeamViewerQS.app"
-    expectedTeamID="H7UGFBUGV6"
-    ;;
 teamviewerqscustom)
     name="TeamViewerQS"
     type="zip"
@@ -11150,6 +11173,14 @@ thoriumreader)
     fi
     appNewVersion=$(versionFromGit edrlab thorium-reader)
     expectedTeamID="327YA3JNGT"
+    ;;
+thunderbird)
+    name="Thunderbird"
+    type="dmg"
+    versionKey="CFBundleShortVersionString"
+    appNewVersion=$(curl -s "https://www.thunderbird.net/en-US/thunderbird/releases/atom.xml" | xmllint --xpath "//*[local-name()='entry']/*[local-name()='title'][not(contains(text(), 'esr'))]/text()" - | head -1 | awk '{ print $2 }')
+    downloadURL="https://download.mozilla.org/?product=thunderbird-${appNewVersion}-SSL&os=osx&lang=en-US"
+    expectedTeamID="43AQ936H96"
     ;;
 thunderbird_intl)
     # This label will try to figure out the selected language of the user,

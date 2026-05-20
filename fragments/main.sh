@@ -223,7 +223,7 @@ if [[ -n $appNewVersion ]]; then
         shouldupdate=true
     fi
 
-    if [[ $appversion == $appNewVersion ]] || [ $shouldupdate = false ]; then
+    if is-at-least $appNewVersion $appversion || [ $shouldupdate = false ]; then
         if [[ $DEBUG -ne 1 ]]; then
             printlog "There is no newer version available."
             if [[ $INSTALL != "force" ]]; then

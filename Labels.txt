@@ -115,6 +115,7 @@ bbedit
 bbeditpkg
 beamstudio
 beekeeperstudio
+beidtoken
 betterdisplay
 bettertouchtool
 betterzip
@@ -315,7 +316,7 @@ ecosiabrowser
 editshare-connect
 egnytecore
 egnytewebedit
-elan
+eidviewer
 elasticvue
 element
 elevate24
@@ -1016,6 +1017,7 @@ teamviewer
 teamviewerhost
 teamviewerhostcustom
 teamviewerqs
+teamviewerqsallington
 teamviewerqscustom
 teamwire
 techsmithcapture

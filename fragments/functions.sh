@@ -909,7 +909,7 @@ finishing() {
     elif [[ -z $oldversion ]]; then
         message="Installed $name, version $appNewVersion"
     else
-        message="Installed $name, version $appNewVersion from version $oldversion"
+        message="Installed $name, old: $oldversion, new: $appNewVersion"
     fi
 
     printlog "$message" REQ

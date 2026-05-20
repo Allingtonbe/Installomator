@@ -897,12 +897,19 @@ finishing() {
     printlog "Finishing..."
 
     sleep 3 # wait a moment to let spotlight catch up
+
+    if [[ $appversion ]]; then
+        oldversion=$appversion
+    fi
+
     getAppVersion
 
     if [[ -z $appNewVersion ]]; then
         message="Installed $name"
-    else
+    elif [[ -z $oldversion ]]; then
         message="Installed $name, version $appNewVersion"
+    else
+        message="Installed $name, version $appNewVersion from version $oldversion"
     fi
 
     printlog "$message" REQ

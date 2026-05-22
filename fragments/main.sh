@@ -1,9 +1,11 @@
 *)
     # unknown label
     #printlog "unknown label $label"
-    cleanupAndExit 1 "unknown label $label" ERROR
+    cleanupAndExit 1 "EXIT: unknown label $label" ERROR
     ;;
 esac
+
+logcode="LOGANALYZER:"
 
 # MARK: reading arguments again
 printlog "Reading arguments again: ${argumentsArray[*]}" INFO
@@ -67,7 +69,7 @@ printlog "updateToolRunAsCurrentUser=${updateToolRunAsCurrentUser}" DEBUG
 if [[ ${INTERRUPT_DND} = "no" ]]; then
     # Check if a fullscreen app is active
     if hasDisplaySleepAssertion; then
-        cleanupAndExit 24 "active display sleep assertion detected, aborting" ERROR
+        cleanupAndExit 24 "$logcode active display sleep assertion detected, aborting" ERROR
     fi
 fi
 
@@ -178,7 +180,7 @@ if [ -z "$targetDir" ]; then
         updateronly)
             ;;
         *)
-            cleanupAndExit 99 "Cannot handle type $type" ERROR
+            cleanupAndExit 99 "$logcode Cannot handle type $type" ERROR
             ;;
     esac
 fi
@@ -200,7 +202,7 @@ fi
 # NOTE: change directory to temporary working directory
 printlog "Changing directory to $tmpDir" DEBUG
 if ! cd "$tmpDir"; then
-    cleanupAndExit 13 "error changing directory $tmpDir" ERROR
+    cleanupAndExit 13 "$logcode error changing directory $tmpDir" ERROR
 fi
 
 # MARK: get installed version
@@ -229,9 +231,9 @@ if [[ -n $appNewVersion ]]; then
                     sleep 2
                 fi
                 if [[ $appNewVersion == $appversion ]]; then
-                    cleanupAndExit 0 "No newer version. $appNewVersion is the same as $appversion." REQ
+                    cleanupAndExit 0 "$logcode No newer version. $appNewVersion is the same as $appversion." REQ
                 else
-                    cleanupAndExit 0 "No newer version. $appNewVersion is older than $appversion" REQ
+                    cleanupAndExit 0 "$logcode No newer version. $appNewVersion is older than $appversion" REQ
                 fi
             fi
         else
@@ -250,9 +252,9 @@ if [[ (-n $appversion && -n "$updateTool") || "$type" == "updateronly" ]]; then
     if [[ $DEBUG -ne 1 ]]; then
         if runUpdateTool; then
             finishing
-            cleanupAndExit 0 "updateTool has run" REQ
+            cleanupAndExit 0 "$logcode updateTool has run" REQ
         elif [[ $type == "updateronly" ]];then
-            cleanupAndExit 0 "type is $type so we end here." REQ
+            cleanupAndExit 0 "$logcode type is $type so we end here." REQ
         fi # otherwise continue
     else
         printlog "DEBUG mode 1 enabled, not running update tool" WARN
@@ -316,10 +318,10 @@ else
         if [[ $archiveType == *ASCII* ]]; then
             firstLines=$(head -c 51170 $archiveName)
             deduplicatelogs $firstLines
-            cleanupAndExit 2 "File Downloaded is ASCII, we’re probably being blocked by a proxy or filter.  First 5k of file is:\n$logoutput" ERROR
+            cleanupAndExit 2 "$logcode File Downloaded is ASCII, we’re probably being blocked by a proxy or filter.  First 5k of file is:\n$logoutput" ERROR
         else
             deduplicatelogs "$curlDownload"
-            cleanupAndExit 2 "Error downloading $downloadURL error:\n$logoutput" ERROR
+            cleanupAndExit 2 "$logcode Error downloading $downloadURL error:\n$logoutput" ERROR
         fi
     fi
 fi
@@ -379,7 +381,7 @@ case $type in
         installAppInDmgInZip
         ;;
     *)
-        cleanupAndExit 99 "Cannot handle type $type" ERROR
+        cleanupAndExit 99 "$logcode Cannot handle type $type" ERROR
         ;;
 esac
 

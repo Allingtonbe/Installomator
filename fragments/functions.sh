@@ -905,11 +905,11 @@ finishing() {
     getAppVersion
 
     if [[ -z $appNewVersion ]]; then
-        message="Installed $name"
+        message="$logcode Installed $name"
     elif [[ -z $oldversion ]]; then
-        message="Installed $name, version $appNewVersion"
+        message="$logcode Installed $name, version $appNewVersion"
     else
-        message="Installed $name, old: $oldversion, new: $appNewVersion"
+        message="$logcode Installed $name, old: $oldversion, new: $appNewVersion"
     fi
 
     printlog "$message" REQ

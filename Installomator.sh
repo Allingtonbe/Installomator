@@ -12863,7 +12863,11 @@ if [[ -n $appNewVersion ]]; then
                     updateDialog "complete" "Latest version already installed..."
                     sleep 2
                 fi
-                cleanupAndExit 0 "No newer version. $appNewVersion is the same or older than $appversion" REQ
+                if [[ $appNewVersion == $appversion ]]; then
+                    cleanupAndExit 0 "No newer version. $appNewVersion is the same as $appversion." REQ
+                else
+                    cleanupAndExit 0 "No newer version. $appNewVersion is older than $appversion" REQ
+                fi
             fi
         else
             printlog "DEBUG mode 1 enabled, not exiting, but there is no new version of app." WARN

@@ -359,7 +359,7 @@ if [[ $(/usr/bin/arch) == "arm64" ]]; then
     fi
 fi
 VERSION="10.9"
-VERSIONDATE="2026-05-20"
+VERSIONDATE="2026-05-22"
 
 # MARK: Functions
 
@@ -851,7 +851,7 @@ installAppWithPath() { # $1: path to app to install in $targetDir $2: path to fo
     # app versioncheck
     appNewVersion=$(defaults read $appPath/Contents/Info.plist $versionKey)
     if [[ -n $appNewVersion ]] && [[ -n $appversion ]] && is-at-least $appNewVersion $appversion; then
-        printlog "Downloaded version of $name is $appNewVersion on versionKey $versionKey, same as installed."
+        printlog "Downloaded version of $name is $appNewVersion on versionKey $versionKey, same or older as installed version $appversion."
         if [[ $INSTALL != "force" ]]; then
             message="$name, version $appNewVersion, is the latest version."
             if [[ $currentUser != "loginwindow" && $NOTIFY == "all" ]]; then
@@ -12842,7 +12842,7 @@ fi
 getAppVersion
 printlog "appversion: $appversion"
 
-# NOTE: Exit if new version is the same as installed version (appNewVersion specified)
+# NOTE: Exit if new version is the same or older as installed version (appNewVersion specified)
 if [[ "$type" != "updateronly" && ($INSTALL == "force" || $IGNORE_APP_STORE_APPS == "yes") ]]; then
     printlog "Label is not of type “updateronly”, and it’s set to use force to install or ignoring app store apps, so not using updateTool."
     updateTool=""
@@ -12863,7 +12863,7 @@ if [[ -n $appNewVersion ]]; then
                     updateDialog "complete" "Latest version already installed..."
                     sleep 2
                 fi
-                cleanupAndExit 0 "No newer version." REQ
+                cleanupAndExit 0 "No newer version. $appNewVersion is the same or older than $appversion" REQ
             fi
         else
             printlog "DEBUG mode 1 enabled, not exiting, but there is no new version of app." WARN

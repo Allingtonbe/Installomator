@@ -207,7 +207,7 @@ fi
 getAppVersion
 printlog "appversion: $appversion"
 
-# NOTE: Exit if new version is the same as installed version (appNewVersion specified)
+# NOTE: Exit if new version is the same or older as installed version (appNewVersion specified)
 if [[ "$type" != "updateronly" && ($INSTALL == "force" || $IGNORE_APP_STORE_APPS == "yes") ]]; then
     printlog "Label is not of type “updateronly”, and it’s set to use force to install or ignoring app store apps, so not using updateTool."
     updateTool=""
@@ -228,7 +228,7 @@ if [[ -n $appNewVersion ]]; then
                     updateDialog "complete" "Latest version already installed..."
                     sleep 2
                 fi
-                cleanupAndExit 0 "No newer version." REQ
+                cleanupAndExit 0 "No newer version. $appNewVersion is the same or older than $appversion" REQ
             fi
         else
             printlog "DEBUG mode 1 enabled, not exiting, but there is no new version of app." WARN

@@ -5,7 +5,7 @@
     ;;
 esac
 
-logcode="LOGANALYZER:"
+logcode="LOGANALYZER :"
 
 # MARK: reading arguments again
 printlog "Reading arguments again: ${argumentsArray[*]}" INFO

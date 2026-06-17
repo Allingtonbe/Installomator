@@ -61,6 +61,12 @@ displaydialogContinue() { # $1: message $2: title
 
 displaynotification() { # $1: message $2: title
     message=${1:-"Message"}
+
+    if [[ -n "$logcode" && "${message#$logcode}" != "$message" ]]; then
+        message="${message#$logcode}"
+        message="${message# }"
+    fi
+
     title=${2:-"Notification"}
     manageaction="/Library/Application Support/JAMF/bin/Management Action.app/Contents/MacOS/Management Action"
     hubcli="/usr/local/bin/hubcli"
@@ -907,9 +913,9 @@ finishing() {
     if [[ -z $appNewVersion ]]; then
         message="$logcode Installed $name"
     elif [[ -z $oldversion ]]; then
-        message="$logcode Installed $name, version $appNewVersion"
+        message="$logcode Installed $name (version $appNewVersion)"
     else
-        message="$logcode Installed $name, old: $oldversion, new: $appNewVersion"
+        message="$logcode Updated $name (old: $oldversion, new: $appNewVersion)"
     fi
 
     printlog "$message" REQ

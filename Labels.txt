@@ -121,6 +121,7 @@ betterdisplay
 bettertouchtool
 betterzip
 beyondcomparepro
+bezel
 bibdesk
 bitrix24
 bitwarden
@@ -151,6 +152,7 @@ cakebrew
 calcservice
 calibre
 calibriteprofiler
+cameracontroller
 camostudio
 camtasia
 camtasia2019
@@ -394,6 +396,7 @@ freeplane
 front
 fsmonitor
 fujifilmwebcam
+garminaviationdatabasemanager
 garminbasecamp
 garminexpress
 gary

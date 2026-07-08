@@ -48,6 +48,7 @@ amazoncorretto17jdk
 amazoncorretto21jdk
 amazoncorretto22jdk
 amazoncorretto23jdk
+amazoncorretto25jdk
 amazoncorretto8jdk
 amazonq
 amazonworkspaces
@@ -239,6 +240,7 @@ conductor
 connectfonts
 container
 cormorant
+coteditor
 craftmanagerforsketch
 crashplan
 crashplansmb
@@ -272,6 +274,7 @@ deskpad
 desktoppr
 detectxswift
 determinate
+devin
 devonthink
 dialog
 dialpad
@@ -316,6 +319,8 @@ eclipsetemurin25
 eclipsetemurin8
 ecosiabrowser
 editshare-connect
+editshare-flowstory
+egnyte
 egnytecore
 egnytewebedit
 eidviewer
@@ -402,6 +407,7 @@ gfxcardstatus
 ghostty
 gimp
 gimpdev
+gitcredentialmanager
 githubcopilotforxcode
 githubdesktop
 gitkraken
@@ -409,6 +415,7 @@ globusconnectpersonal
 glpiagent
 glyphs3
 gns3
+godot
 goland
 golang
 googleadseditor
@@ -430,6 +437,7 @@ gotomeeting
 gotowebinar
 gpgsuite
 gpgsync
+gram
 grammarly
 grandperspective
 granola
@@ -493,7 +501,9 @@ iterm2
 itsycal
 izotopeproductportal
 jabradirect
+jamf-cli
 jamfcheck
+jamfcli
 jamfconnect
 jamfconnectconfiguration
 jamfconnectlaunchagent
@@ -563,6 +573,7 @@ latexit
 launchbar
 launchcontrol
 lcadvancedvpnclient
+ledgerwallet
 lens
 lexarrecoverytool
 lgcalibrationstudio
@@ -598,6 +609,7 @@ lulu
 lunadisplay
 macadminspython
 maccyapp
+mace
 macfuse
 macoslaps
 macpass
@@ -639,6 +651,7 @@ microsoftedgeconsumerstable
 microsoftedgeenterprisestable
 microsoftexcel
 microsoftexcelreset
+microsoftglobalsecureaccessclient
 microsoftlicenseremovaltool
 microsoftlicensereset
 microsoftoffice365
@@ -660,6 +673,7 @@ microsoftoutlookdataremoval
 microsoftoutlookreset
 microsoftpowerpoint
 microsoftpowerpointreset
+microsoftpowershell
 microsoftremotedesktop
 microsoftremotehelp
 microsoftsharepointplugin
@@ -730,6 +744,7 @@ nomadlogin
 nordlayer
 nordvpn
 notion
+notioncalendar
 nova
 nps-santa
 npssantafull
@@ -845,8 +860,10 @@ pycharmce
 pymol
 python
 qgis-pr
+qgisltr
 qlab
 r
+radiosilence
 raindropio
 rancherdesktop
 rapidapi
@@ -902,6 +919,7 @@ scaleft
 scapple
 scenebuilder
 scmenu
+scratch
 screamingfrogseospider
 screencloudplayer
 screenflick
@@ -975,6 +993,7 @@ sqlitebrowser
 sqlpropostgres
 sqlprostudio
 sshfs
+starface10x
 starface90x
 starface91x
 stats
@@ -993,6 +1012,7 @@ suitestudio
 supercollider
 superhuman
 superwhisper
+supportapp
 surfdrive
 suspiciouspackage
 swiftdialog
@@ -1023,6 +1043,7 @@ teamviewerqs
 teamviewerqsallington
 teamviewerqscustom
 teamwire
+techsmithaudiate
 techsmithcapture
 teladocproviderinstaller
 telegram

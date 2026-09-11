@@ -206,6 +206,7 @@ NOTIFY_DIALOG=0
 #     - pkgInDmg
 #     - pkgInZip
 #     - appInDmgInZip
+#     - pkgInDmgInZip
 #     - updateronly     This last one is for labels that should only run an updateTool (see below)
 #
 # - packageID: (optional)
@@ -362,7 +363,7 @@ if [[ $(/usr/bin/arch) == "arm64" ]]; then
     fi
 fi
 VERSION="10.10beta"
-VERSIONDATE="2026-08-25"
+VERSIONDATE="2026-09-04"
 
 # MARK: Functions
 
@@ -1000,9 +1001,9 @@ installFromPKG() {
     spctlStatus=$(echo $?)
     printlog "spctlOut is $spctlOut" DEBUG
 
-    teamID=$(echo $spctlOut | awk -F '(' '/origin=/ {print $2 }' | tr -d '()' )
-    # Apple signed software has no teamID, grab entire origin instead
-    if [[ -z $teamID ]]; then
+    teamID=$(echo $spctlOut | awk -F '(' '/origin=/ {print $NF }' | tr -d '()' )
+    # Apple signed software has no teamID, grab entire text after origin= instead
+    if [[ -z $teamID ]] || [[ $teamID == "origin="* ]]; then
         teamID=$(echo $spctlOut | awk -F '=' '/origin=/ {print $NF }')
     fi
 
@@ -1204,7 +1205,7 @@ installPkgInZip() {
     installFromPKG
 }
 
-installAppInDmgInZip() {
+installItemInDmgInZip() {
     # unzip the archive
     printlog "Unzipping $archiveName"
     tar -xf "$archiveName"
@@ -1225,9 +1226,21 @@ installAppInDmgInZip() {
         archiveName="$pkgName"
     fi
 
-    # installFromDMG, DMG expected to include an app (will not work with pkg)
-    installFromDMG
+    case $type in
+        appInDmgInZip)
+            # installFromDMG, DMG expected to include an app (will not work with pkg)
+            installFromDMG
+            ;;
+        pkgInDmgInZip)
+            # installPkgInDmg, DMG expected to include an pkg (will not work with app)
+            installPkgInDmg
+            ;;
+        *)
+            cleanupAndExit 99 "Cannot handle type $type" ERROR
+            ;;
+    esac
 }
+
 
 runUpdateTool() {
     printlog "Function called: runUpdateTool"
@@ -1300,8 +1313,8 @@ finishing() {
 # KeyNote, PowerPoint, Zoom, or Webex.
 # See: https://developer.apple.com/documentation/iokit/iopmlib_h/iopmassertiontypes
 hasDisplaySleepAssertion() {
-    # Get the names of all apps with active display sleep assertions
-    local apps="$(/usr/bin/pmset -g assertions | /usr/bin/awk '/NoDisplaySleepAssertion | PreventUserIdleDisplaySleep/ && match($0,/\(.+\)/) && ! /coreaudiod/ {gsub(/^.*\(/,"",$0); gsub(/\).*$/,"",$0); print};')"
+    # Get the names of all apps with active display sleep assertions (removing non-ASCII characters before awk)
+    local apps="$(/usr/bin/pmset -g assertions | iconv -f UTF-8 -t ASCII//TRANSLIT//IGNORE | /usr/bin/awk '/NoDisplaySleepAssertion | PreventUserIdleDisplaySleep/ && match($0,/\(.+\)/) && ! /coreaudiod/ {gsub(/^.*\(/,"",$0); gsub(/\).*$/,"",$0); print};')"
 
     if [[ ! "${apps}" ]]; then
         # No display sleep assertions detected
@@ -1649,8 +1662,9 @@ valuesfromarguments)
 1password8)
     name="1Password"
     type="pkg"
-    downloadURL="https://downloads.1password.com/mac/1Password.pkg"
-    appNewVersion=$(curl -s https://releases.1password.com/mac/stable/index.xml | grep "<title>" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | tail -n1)
+    onepassDetails=$(curl -fs "https://app-updates.agilebits.com/check/2/14.6.1/arm64/OPM8/en/80000000/A1/N")
+    appNewVersion=$(getJSONValue "${onepassDetails}" "version")
+    downloadURL="https://cache.agilebits.com/dist/1P/mac8/1Password-${appNewVersion}.pkg"
     expectedTeamID="2BUA8C4S2C"
     blockingProcesses=( "1Password Extension Helper" "1Password 7" "1Password 8" "1Password" "1PasswordNativeMessageHost" "1PasswordSafariAppExtension" )
     ;;
@@ -2336,13 +2350,13 @@ apachedirectorystudio)
 apachenetbeans)
     name="Apache NetBeans"
     type="pkg"
-    if [[ $(arch) = "arm64" ]]; then
-        archiveName="Apache-NetBeans-[0-9]*-arm64.pkg"
+    if [[ "$arch" == "arm64" ]]; then
+        archiveName="arm64.pkg"
     else
-        archiveName="Apache-NetBeans-[0-9]*-x86_64.pkg"
+        archiveName="x86_64.pkg"
     fi
-    downloadURL="$(downloadURLFromGit Friends-of-Apache-NetBeans netbeans-installers)"
-    appNewVersion=$(curl -sLI "https://github.com/Friends-of-Apache-NetBeans/netbeans-installers/releases/latest" | grep -i "^location" | tr "/" "\n" | tail -1 | sed -E 's/v([0-9]+).*/\1/')
+    downloadURL=$(downloadURLFromGit Friends-of-Apache-NetBeans netbeans-installers)
+    appNewVersion=$(versionFromGit Friends-of-Apache-NetBeans netbeans-installers | sed -E 's/^v?([0-9]+).*/\1/')
     expectedTeamID="44YNN9Q525"
     ;;
 ape)
@@ -2635,6 +2649,18 @@ audacity)
     appNewVersion=$(versionFromGit audacity audacity)
     appCustomVersion(){ defaults read "/Applications/Audacity.app/Contents/Info.plist" CFBundleVersion | cut -d '.' -f 1-3 }
     expectedTeamID="AWEYX923UX"
+    ;;
+audiopen)
+    name="AudioPen"
+    type="dmg"
+    if [[ $(arch) == "arm64" ]]; then
+        downloadURL=$(downloadURLFromGit louispereira23 AudioPen-Releases)
+        appNewVersion=$(versionFromGit louispereira23 AudioPen-Releases)
+    else
+        printlog "AudioPen is only compatible with Apple Silicon (arm64) Macs." ERROR
+        cleanupAndExit 95 "AudioPen requires Apple Silicon" ERROR
+    fi
+    expectedTeamID="WBFQ68C53U"
     ;;
 autodeskfusion360admininstall)
     name="Autodesk Fusion 360 Admin Install"
@@ -3342,6 +3368,20 @@ charles)
     downloadURL="https://www.charlesproxy.com/assets/release/$appNewVersion/charles-proxy-$appNewVersion.dmg"
     expectedTeamID="9A5PCU4FSD"
     ;;
+chatgpt|codex)
+    name="ChatGPT"
+    type="zip"
+    if [[ $(arch) == "arm64" ]]; then
+        sparkleData=$(curl -fsL "https://persistent.oaistatic.com/codex-app-prod/appcast.xml")
+        appNewVersion=$(echo "$sparkleData" | xpath 'string(//rss/channel/item[1]/sparkle:shortVersionString)')
+        downloadURL=$(echo "$sparkleData" | xpath 'string(//rss/channel/item[1]/enclosure/@url)')
+    else
+        printlog "ChatGPT is only compatible with Apple Silicon (arm64) Macs." ERROR
+        cleanupAndExit 95 "ChatGPT requires Apple Silicon" ERROR
+    fi
+    blockingProcesses=( "ChatGPT" )
+    expectedTeamID="2DC432GLL2"
+    ;;
 chatgptclassic)
     name="ChatGPT Classic"
     type="pkg"
@@ -3955,18 +3995,6 @@ coderunner)
     downloadURL="https://coderunnerapp.com/download"
     appNewVersion=$(curl -fsIL ${downloadURL} | grep -i "^location" | cut -d " " -f2 | sed -E 's/.*CodeRunner-([0-9.]*).zip/\1/')
     expectedTeamID="R4GD98AJF9"
-    ;;
-codex)
-    name="Codex"
-    type="dmg"
-    if [[ $(arch) == "arm64" ]]; then
-        downloadURL="https://persistent.oaistatic.com/codex-app-prod/Codex.dmg"
-    else
-        printlog "Codex is only compatible with Apple Silicon (arm64) Macs." ERROR
-        cleanupAndExit 95 "Codex requires Apple Silicon" ERROR
-    fi
-    appNewVersion="$(curl -fs "https://persistent.oaistatic.com/codex-app-prod/appcast.xml" | grep -o '<sparkle:shortVersionString>[^<]*' | head -1 | cut -d '>' -f 2)"
-    expectedTeamID="2DC432GLL2"
     ;;
 colourcontrastanalyser)
     name="Colour Contrast Analyser"
@@ -6144,6 +6172,18 @@ hazel)
     appNewVersion=$(curl -fsI https://www.noodlesoft.com/Products/Hazel/download | grep -i "^location" | awk '{print $2}' | sed -E 's/.*\/[a-zA-Z]*-([0-9.]*)\..*/\1/g')
     expectedTeamID="86Z3GCJ4MF"
     ;;
+headlamp)
+    name="Headlamp"
+    type="dmg"
+    if [[ "$(arch)" == "arm64" ]]; then
+        archiveName="mac-arm64.dmg"
+    else
+        archiveName="mac-x64.dmg"
+    fi
+    downloadURL=$(downloadURLFromGit kubernetes-sigs headlamp)
+    appNewVersion=$(versionFromGit kubernetes-sigs headlamp)
+    expectedTeamID="5N2JF58U87"
+    ;;
 hexfiend)
     name="Hex Fiend"
     type="dmg"
@@ -6640,6 +6680,13 @@ jamfprintermanager)
     appNewVersion="$(versionFromGit jamf jamf-printer-manager)"
     expectedTeamID="483DWKW443"
     ;;
+jamfpssoutility)
+    name="PSSO Utility"
+    type="pkg"
+    downloadURL=$(downloadURLFromGit jamf-concepts psso-utility)
+    appNewVersion=$(versionFromGit jamf-concepts psso-utility)
+    expectedTeamID="483DWKW443"
+    ;;
 jamfreenroller)
     # credit: Mischa van der Bent
     name="ReEnroller"
@@ -6648,6 +6695,14 @@ jamfreenroller)
     #appNewVersion=$(versionFromGit jamf ReEnroller)
     expectedTeamID="PS2F6S478M"
     ;;
+jamfsetupchecklist)
+    name="JAMF Setup Checklist"
+    type="pkg"
+    downloadURL=$(downloadURLFromGit Jamf-Concepts Setup-Checklist)
+    appNewVersion=$(versionFromGit Jamf-Concepts Setup-Checklist)
+    expectedTeamID="483DWKW443"
+    ;;
+  
 jamfsetupmanager)
     name="Setup Manager"
     type="pkg"
@@ -7255,6 +7310,28 @@ lens)
     appNewVersion=$(printf '%s' "${xmlContent}" | xmllint --xpath '//key[text()="version"]/following-sibling::string[1]/text()' -)
     expectedTeamID="JJ22T2W355"
     ;;
+levelscreenrecorder)
+	name="Level Screen Recorder"
+	type="dmg"
+	if [[ "$(arch)" == "arm64" ]]; then platformKey="osx_arm64"; else platformKey="osx_64"; fi
+	levelScreenRecorderJSON=$(curl -fsL "https://sr-releases.thelevel.ai/versions/sorted?page=0")
+	i=0; appNewVersion=""
+	while channelName=$(getJSONValue "$levelScreenRecorderJSON" "items[$i].channel.name" 2>/dev/null); do
+		j=0
+		while assetPlatform=$(getJSONValue "$levelScreenRecorderJSON" "items[$i].assets[$j].platform" 2>/dev/null); do
+			if [[ "$channelName" == "stable" && "$assetPlatform" == "$platformKey" && "$(getJSONValue "$levelScreenRecorderJSON" "items[$i].assets[$j].filetype" 2>/dev/null)" == ".dmg" ]]; then
+				appNewVersion=$(getJSONValue "$levelScreenRecorderJSON" "items[$i].name")
+				break
+			fi
+			j=$((j + 1))
+		done
+		[[ -n "$appNewVersion" ]] && break
+		i=$((i + 1))
+	done
+	[[ -n "$appNewVersion" ]] || cleanupAndExit 95 "could not determine latest Level Screen Recorder macOS version" ERROR
+	downloadURL="https://sr-releases.thelevel.ai/download/flavor/default/${appNewVersion}/${platformKey}?filetype=.dmg"
+	expectedTeamID="2HBZBC3S5M"
+	;;
 lexarrecoverytool)
     name="Lexar Recovery Tool"
     type="appInDmgInZip"
@@ -7327,13 +7404,13 @@ libericajdk8ltsfull)
 libreoffice)
     name="LibreOffice"
     type="dmg"
-    appNewVersion="$(curl -s https://download.documentfoundation.org/libreoffice/stable/ | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | tail -1)"
+    libreOfficeDownloadVersion=$(curl -fsL "https://download.documentfoundation.org/libreoffice/stable/" | grep -oE "[0-9]+[.][0-9]+[.][0-9]+/" | tr -d / | awk -F. 'max=="" || ($1+0)*1000000+($2+0)*1000+($3+0) > max { max=($1+0)*1000000+($2+0)*1000+($3+0); version=$0 } END { print version }')
+    appNewVersion=$(curl -fsL "https://download.documentfoundation.org/libreoffice/src/${libreOfficeDownloadVersion}/" | grep -oE "libreoffice-${libreOfficeDownloadVersion}[.][0-9]+[.]tar[.]xz" | sed -E "s/^libreoffice-//; s/[.]tar[.]xz$//" | head -1)
     if [[ $(arch) == "arm64" ]]; then
-    	downloadURL="https://download.documentfoundation.org/libreoffice/stable/${appNewVersion}/mac/aarch64/LibreOffice_${appNewVersion}_MacOS_aarch64.dmg"
+        downloadURL="https://download.documentfoundation.org/libreoffice/stable/${libreOfficeDownloadVersion}/mac/aarch64/LibreOffice_${libreOfficeDownloadVersion}_MacOS_aarch64.dmg"
     elif [[ $(arch) == "i386" ]]; then
-    	downloadURL="https://download.documentfoundation.org/libreoffice/stable/${appNewVersion}/mac/x86_64/LibreOffice_${appNewVersion}_MacOS_x86-64.dmg"
+        downloadURL="https://download.documentfoundation.org/libreoffice/stable/${libreOfficeDownloadVersion}/mac/x86_64/LibreOffice_${libreOfficeDownloadVersion}_MacOS_x86-64.dmg"
     fi
-    versionKey="CFBundleVersion"
     expectedTeamID="7P5S3ZLCN7"
     blockingProcesses=( soffice )
     ;;
@@ -7413,9 +7490,17 @@ livereplayer)
 lmstudio)
     name="LM Studio"
     type="dmg"
-    appNewVersion=$(curl -fsL "https://versions-prod.lmstudio.ai/update/darwin/arm64/latest" | plutil -extract version raw -)
-    appBuild=$(curl -fsL "https://versions-prod.lmstudio.ai/update/darwin/arm64/${appNewVersion}" | plutil -extract build raw -)
-    downloadURL="https://installers.lmstudio.ai/darwin/arm64/${appNewVersion}-${appBuild}/LM-Studio-${appNewVersion}-${appBuild}-arm64.dmg"
+    if [[ $(arch) == "arm64" ]]; then
+        versionData=$(curl -fsL "https://versions-prod.lmstudio.ai/update/darwin/arm64/latest")
+        appVersion=$(echo "$versionData" | sed -n 's/.*"version":"\([^"]*\)".*/\1/p')
+        appBuild=$(echo "$versionData" | sed -n 's/.*"build":"\([^"]*\)".*/\1/p')
+        downloadVersion="${appVersion}-${appBuild}"
+        downloadURL="https://installers.lmstudio.ai/darwin/arm64/${downloadVersion}/LM-Studio-${downloadVersion}-arm64.dmg"
+        appNewVersion="${appVersion}+${appBuild}"
+    else
+        printlog "LM Studio is only compatible with Apple Silicon (arm64) Macs." ERROR
+        cleanupAndExit 95 "LM Studio requires Apple Silicon" ERROR
+    fi
     expectedTeamID="D65G88RHWN"
     ;;
 logitechghub|\
@@ -8557,6 +8642,13 @@ miro)
     fi
     expectedTeamID="M3GM7MFY7U"
     ;;
+missive)
+    name="Missive"
+    type="dmg"
+    downloadURL="https://mail.missiveapp.com/download/mac"
+    appNewVersion=$(curl -fsLI -o /dev/null -w '%{url_effective}' "$downloadURL" | sed -E 's#.*/Missive-([0-9]+(\.[0-9]+)+)\.dmg#\1#')
+    expectedTeamID="PXGQRRXCJN"
+    ;;
 mist-cli)
     name="Mist-CLI"
     type="pkg"
@@ -9125,11 +9217,11 @@ obsbotwebcam)
     expectedTeamID="7GJANK3822"
     ;;
 obsidian)
-    # credit: Søren Theilgaard (@theilgaard)
     name="Obsidian"
     type="dmg"
-    downloadURL=$( downloadURLFromGit obsidianmd obsidian-releases )
-    appNewVersion=$(versionFromGit obsidianmd obsidian-releases)
+    obsidianData=$(curl -fsL "https://raw.githubusercontent.com/obsidianmd/obsidian-releases/master/desktop-releases.json")
+    appNewVersion=$(getJSONValue "$obsidianData" "latestVersion")
+    downloadURL="https://github.com/obsidianmd/obsidian-releases/releases/download/v${appNewVersion}/Obsidian-${appNewVersion}.dmg"
     expectedTeamID="6JSW4SJWN9"
     ;;
 obsioscamera)
@@ -9797,6 +9889,14 @@ prism10)
     type="dmg"
     downloadURL="https://cdn.graphpad.com/downloads/prism/10/InstallPrism10.dmg"
     appNewVersion=$(curl -fs "https://www.graphpad.com/updates" | grep -Eio 'The latest Prism version is.*' | cut -d "(" -f 1 | awk -F '<!-- --> <!-- -->' '{print $2}' | cut -d "<" -f 1)
+    expectedTeamID="YQ2D36NS9M"
+    ;;
+prism11)
+    name="Prism 11"
+    type="dmg"
+    sparkleData=$(curl -fsL "https://licenses.graphpad.com/updates?version=11.0.0&configuration=full&platform=Mac&osVersion=26.0.0&osBitVersion=arm&appLanguageCode=en-us")
+    downloadURL=$(echo "$sparkleData" | xmllint --xpath 'string(//*[local-name()="enclosure"]/@url)' -)
+    appNewVersion=$(echo "$downloadURL" | sed -E 's|.*/prism/11/([0-9]+(\.[0-9]+)+)/InstallPrism11\.dmg|\1|')
     expectedTeamID="YQ2D36NS9M"
     ;;
 prism9)
@@ -11084,6 +11184,12 @@ splice)
 spotify)
     name="Spotify"
     type="dmg"
+    tmpSpotifyDir=$(mktemp -d)
+    zipSpotifyPath="$tmpSpotifyDir/SpotifyInstaller.zip"
+    curl -fsSL "https://download.scdn.co/SpotifyInstaller.zip" -o "$zipSpotifyPath"
+    unzip -q "$zipSpotifyPath" -d "$tmpSpotifyDir"
+    appNewVersion=$(/usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" "$tmpSpotifyDir/Install Spotify.app/Contents/Info.plist")
+    rm -rf "$tmpSpotifyDir"
     if [[ $(arch) == arm64 ]]; then
         downloadURL="https://download.scdn.co/SpotifyARM64.dmg"
     elif [[ $(arch) == i386 ]]; then
@@ -12600,6 +12706,14 @@ weprint)
     expectedTeamID="2D42ACMA8R"
     versionKey="CFBundleVersion"
     ;;
+whatcable)
+    name="WhatCable"
+    type="zip"
+    archiveName="WhatCable.zip"
+    downloadURL=$(downloadURLFromGit "darrylmorley" "whatcable")
+    appNewVersion=$(versionFromGit "darrylmorley" "whatcable" | sed 's/^v//')
+    expectedTeamID="M4RUJ7W6MP"
+    ;;
 whatroute)
     name="WhatRoute"
     type="zip"
@@ -13555,8 +13669,8 @@ case $type in
     pkgInZip)
         installPkgInZip
         ;;
-    appInDmgInZip)
-        installAppInDmgInZip
+    *InDmgInZip)
+        installItemInDmgInZip
         ;;
     *)
         cleanupAndExit 99 "$logcode Cannot handle type $type" ERROR

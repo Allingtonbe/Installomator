@@ -94,6 +94,7 @@ atext
 atextlegacy
 atlassiancompanion
 audacity
+audiopen
 autodeskfusion360admininstall
 autodmg
 automounter
@@ -241,7 +242,6 @@ coconutbattery
 code42
 codemeter
 coderunner
-codex
 colourcontrastanalyser
 conductor
 connectfonts
@@ -473,6 +473,7 @@ handy
 harmonysase
 harper
 hazel
+headlamp
 hexfiend
 hiddenbar
 hmavpn
@@ -537,7 +538,9 @@ jamfcpr
 jamfmigrator
 jamfpppcutility
 jamfprintermanager
+jamfpssoutility
 jamfreenroller
+jamfsetupchecklist
 jamfsetupmanager
 jamovi
 jasp
@@ -602,6 +605,7 @@ launchcontrol
 lcadvancedvpnclient
 ledgerwallet
 lens
+levelscreenrecorder
 lexarrecoverytool
 lgcalibrationstudio
 libericajdk11ltsfull
@@ -726,6 +730,7 @@ minecraftedu
 miniconda
 minisim
 miro
+missive
 mist
 mist-cli
 mixxx
@@ -872,6 +877,7 @@ powermonitor
 pppcutility
 praat
 prism10
+prism11
 prism9
 pritunl
 privileges
@@ -1197,6 +1203,7 @@ webextoolsremoval
 webexvdiplugin
 wechat
 weprint
+whatcable
 whatroute
 whatsapp
 whimsical

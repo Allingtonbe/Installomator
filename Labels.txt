@@ -838,6 +838,7 @@ outputarcade
 outputhub
 outset
 overflow
+overlord
 owncloud
 pacifist
 packages
@@ -992,7 +993,6 @@ sketchup2024
 sketchup2025
 sketchup2026
 skim
-skype
 slab
 slack
 slido

@@ -362,8 +362,8 @@ if [[ $(/usr/bin/arch) == "arm64" ]]; then
         rosetta2=no
     fi
 fi
-VERSION="10.10beta"
-VERSIONDATE="2026-09-04"
+VERSION="10.10.1"
+VERSIONDATE="2026-09-11"
 
 # MARK: Functions
 
@@ -3096,7 +3096,7 @@ bruno)
     fi
     downloadURL="$(downloadURLFromGit usebruno bruno)"
     appNewVersion="$(versionFromGit usebruno bruno)"
-    expectedTeamID="P3WTZH48ZB"
+    expectedTeamID="W7LPPWA48L"
     ;;
 bugdom)
     name="Bugdom"
@@ -8163,6 +8163,7 @@ microsoftedgeenterprisestable)
     appNewVersion=$(curl -fsIL "$downloadURL" | grep -i location: | grep -o "/MicrosoftEdge.*pkg" | sed -E 's/.*\/[a-zA-Z]*-([0-9.]*)\..*/\1/g')
     expectedTeamID="UBF8T346G9"
     ;;
+    
 microsoftedgebeta)
     name="Microsoft Edge Beta"
     type="pkg"
@@ -9563,6 +9564,13 @@ overflow)
     expectedTeamID="7TK7YSGJFF"
     versionKey="CFBundleShortVersionString"
     ;;
+overlord)
+    name="Overlord"
+    type="dmg"
+    downloadURL="$(downloadURLFromGit battleaxedotco underling)"
+    appNewVersion="$(versionFromGit battleaxedotco underling)"
+    expectedTeamID="4BF6YF8AAU"
+    ;;
 owncloud)
     name="ownCloud"
     type="pkg"
@@ -10824,16 +10832,6 @@ skim)
     expectedTeamID="J33JTA7SY9"
     ;;
 
-skype)
-    name="Skype"
-    type="dmg"
-    downloadURL=$(curl -sfi https://get.skype.com/go/getskype-skypeformac | awk 'BEGIN{IGNORECASE=1} /location:/ {gsub(/\r/,"",$2); print $2}')
-    archiveName=$(basename "$downloadURL")
-    appNewVersion=$(awk -F'[-.]' '{print $2"."$3"."$4"."$5}' <<< "$archiveName")
-    versionKey="CFBundleVersion"
-    blockingProcesses=( "Skype" , "Skype Helper" )
-    expectedTeamID="AL798K98FX"
-    ;;
 slab)
     name="Slab"
     type="dmg"

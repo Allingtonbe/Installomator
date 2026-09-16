@@ -362,8 +362,8 @@ if [[ $(/usr/bin/arch) == "arm64" ]]; then
         rosetta2=no
     fi
 fi
-VERSION="10.10.1"
-VERSIONDATE="2026-09-11"
+VERSION="10.10beta"
+VERSIONDATE="2026-09-15"
 
 # MARK: Functions
 
@@ -2641,14 +2641,24 @@ atlassiancompanion)
     expectedTeamID="UPXU4CQZ5P"
     ;;
 
-audacity)
+audacity|\
+audacity3)
     name="Audacity"
     type="dmg"
-    archiveName="audacity-macOS-[0-9.]*-universal.dmg"
-    downloadURL=$(downloadURLFromGit audacity audacity)
-    appNewVersion=$(versionFromGit audacity audacity)
-    appCustomVersion(){ defaults read "/Applications/Audacity.app/Contents/Info.plist" CFBundleVersion | cut -d '.' -f 1-3 }
-    expectedTeamID="AWEYX923UX"
+    releaseData=$(curl -fsL "https://api.github.com/repos/audacity/audacity/releases?per_page=100")
+    downloadURL=$(printf '%s\n' "$releaseData" | awk -F '"' '/"browser_download_url":/ && /audacity-macOS-3\.[0-9]+\.[0-9]+-universal\.dmg/ && url == "" { url=$4 } END { print url }')
+    appNewVersion=$(printf '%s\n' "$downloadURL" | sed -E 's|.*/audacity-macOS-([0-9]+(\.[0-9]+)+)-universal\.dmg$|\1.0|')
+    expectedTeamID="6EPAF2X3PR"
+    ;;
+audacity4)
+    name="Audacity"
+    appName="Audacity 4.app"
+    type="dmg"
+    archiveName="Audacity4.dmg"
+    releaseData=$(curl -fsL "https://api.github.com/repos/audacity/audacity/releases?per_page=100")
+    downloadURL=$(printf '%s\n' "$releaseData" | awk -F '"' '/"browser_download_url":/ && /audacity-macOS-4\.[0-9]+\.[0-9]+-universal\.dmg/ && url == "" { url=$4 } END { print url }')
+    appNewVersion=$(printf '%s\n' "$downloadURL" | sed -E 's|.*/audacity-macOS-([0-9]+(\.[0-9]+)+)-universal\.dmg$|\1|')
+    expectedTeamID="6EPAF2X3PR"
     ;;
 audiopen)
     name="AudioPen"
@@ -11508,6 +11518,16 @@ synologyactivebackupforbusinessagent)
     downloadURL=$(appVersion=`curl -sf https://archive.synology.com/download/Utility/ActiveBackupBusinessAgent | grep -m 1 /download/Utility/ActiveBackupBusinessAgent/ | sed "s|.*>\(.*\)<.*|\\1|"` && appShortVersion=`sed 's#.*-\(\)#\1#' <<< $appVersion` && echo https://global.download.synology.com/download/Utility/ActiveBackupBusinessAgent/"$appVersion"/Mac/x86_64/Synology%20Active%20Backup%20for%20Business%20Agent-"$appVersion".dmg)
     # appNewVersion=$(appVersionP1=`curl -sf https://archive.synology.com/download/Utility/ActiveBackupBusinessAgent | grep -m 1 /download/Utility/ActiveBackupBusinessAgent/ | sed "s|.*>\(.*\)-.*|\\1|"` && sed 's/\(.\{0\}\)./\17/' <<< $appVersionP1)
     appNewVersion=$(curl -sf https://archive.synology.com/download/Utility/ActiveBackupBusinessAgent | grep -m 1 /download/Utility/ActiveBackupBusinessAgent/ | sed "s|.*>\(.*\)<.*|\\1|" | sed "s#.*-\(\)#\1#")
+    expectedTeamID="X85BAK35Y4"
+    ;;
+synologyactiveprotectagent)
+    name="ActiveProtect Agent"
+    type="pkg"
+    releaseURL="https://archive.synology.com/download/Utility/ActiveProtectAgent"
+    releaseVersion=$(curl -fsL "$releaseURL/" | xmllint --html --xpath 'string((//a[contains(@href, "/download/Utility/ActiveProtectAgent/")])[1])' - 2>/dev/null)
+    appNewVersion="${releaseVersion##*-}"
+    downloadURL=$(curl -fsL "$releaseURL/$releaseVersion" | xmllint --html --xpath 'string((//a[contains(@href, "/Mac/") and substring(@href, string-length(@href) - 3) = ".pkg"])[1]/@href)' - 2>/dev/null)
+    versionKey="CFBundleVersion"
     expectedTeamID="X85BAK35Y4"
     ;;
 synologyassistant)

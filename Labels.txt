@@ -94,6 +94,8 @@ atext
 atextlegacy
 atlassiancompanion
 audacity
+audacity3
+audacity4
 audiopen
 autodeskfusion360admininstall
 autodmg
@@ -1066,6 +1068,7 @@ synergybaseball
 synergybasketball
 synergyvideoexpress
 synologyactivebackupforbusinessagent
+synologyactiveprotectagent
 synologyassistant
 synologydriveclient
 sysexlibrarian

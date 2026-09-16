@@ -123,6 +123,7 @@ beamstudio
 beekeeperstudio
 beidtoken
 betterdisplay
+bettershot
 bettertouchtool
 betterzip
 beyondcomparepro

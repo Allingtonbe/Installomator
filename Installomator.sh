@@ -362,8 +362,8 @@ if [[ $(/usr/bin/arch) == "arm64" ]]; then
         rosetta2=no
     fi
 fi
-VERSION="10.10beta"
-VERSIONDATE="2026-09-15"
+VERSION="10.10.1"
+VERSIONDATE="2026-09-16"
 
 # MARK: Functions
 
@@ -2887,6 +2887,19 @@ betterdisplay)
     downloadURL=$(downloadURLFromGit waydabber BetterDisplay)
     appNewVersion=$(versionFromGit waydabber BetterDisplay)
     expectedTeamID="299YSU96J7"
+    ;;
+bettershot)
+    name="BetterShot"
+    type="dmg"
+    if [[ $(arch) == "arm64" ]]; then
+        downloadURL=$(downloadURLFromGit "KartikLabhshetwar" "better-shot")
+        appNewVersion=$(versionFromGit "KartikLabhshetwar" "better-shot")
+    else
+        archiveName="bettershot-x86_64.dmg"
+        downloadURL=$(downloadURLFromGit "KartikLabhshetwar" "better-shot")
+        appNewVersion=$(versionFromGit "KartikLabhshetwar" "better-shot")
+    fi
+    expectedTeamID="8JL39GK2DC"
     ;;
 bettertouchtool)
     # credit: Søren Theilgaard (@theilgaard)

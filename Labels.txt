@@ -458,7 +458,6 @@ gotiengviet
 gotomeeting
 gotowebinar
 gpgsuite
-gpgsync
 gram
 grammarly
 grandperspective

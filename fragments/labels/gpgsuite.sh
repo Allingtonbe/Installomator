@@ -1,11 +1,10 @@
 gpgsuite)
-    # credit: Micah Lee (@micahflee)
     name="GPG Suite"
     type="pkgInDmg"
     pkgName="Install.pkg"
-    downloadURL=$(curl -s https://gpgtools.com/ | grep https://releases.gpgtools.com/GPG_Suite- | grep Download | cut -d'"' -f4)
-    appNewVersion=$(echo $downloadURL | cut -d "-" -f 2 | cut -d "." -f 1-2)
+    downloadURL=$(curl -fsL "https://gpgtools.org/" | grep -oE 'https://releases\.gpgtools\.com/[^"]*GPG_Suite-[^"]*\.dmg' | head -n 1)
+    appNewVersion=$(sed -E 's#^.*/GPG_Suite-([^/]+)\.dmg$#\1#' <<< "$downloadURL")
+    appCustomVersion(){ /usr/bin/defaults read "/Library/Application Support/GPGTools/version.plist" CFBundleVersion; }
+    blockingProcesses=( NONE )
     expectedTeamID="PKV8ZPD836"
-    blockingProcesses=( "GPG Keychain" )
-    appCustomVersion(){ defaults read /Library/Application\ Support/GPGTools/version.plist CFBundleShortVersionString }
     ;;

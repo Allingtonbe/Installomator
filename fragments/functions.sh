@@ -61,6 +61,12 @@ displaydialogContinue() { # $1: message $2: title
 
 displaynotification() { # $1: message $2: title
     message=${1:-"Message"}
+
+    if [[ -n "$logcode" && "${message#$logcode}" != "$message" ]]; then
+        message="${message#$logcode}"
+        message="${message# }"
+    fi
+
     title=${2:-"Notification"}
     manageaction="/Library/Application Support/JAMF/bin/Management Action.app/Contents/MacOS/Management Action"
     hubcli="/usr/local/bin/hubcli"
@@ -487,8 +493,8 @@ installAppWithPath() { # $1: path to app to install in $targetDir $2: path to fo
 
     # app versioncheck
     appNewVersion=$(defaults read $appPath/Contents/Info.plist $versionKey)
-    if [[ -n $appNewVersion && $appversion == $appNewVersion ]]; then
-        printlog "Downloaded version of $name is $appNewVersion on versionKey $versionKey, same as installed."
+    if [[ -n $appNewVersion ]] && [[ -n $appversion ]] && is-at-least $appNewVersion $appversion; then
+        printlog "Downloaded version of $name is $appNewVersion on versionKey $versionKey, same or older as installed version $appversion."
         if [[ $INSTALL != "force" ]]; then
             message="$name, version $appNewVersion, is the latest version."
             if [[ $currentUser != "loginwindow" && $NOTIFY == "all" ]]; then
@@ -909,12 +915,19 @@ finishing() {
     printlog "Finishing..."
 
     sleep 3 # wait a moment to let spotlight catch up
+
+    if [[ $appversion ]]; then
+        oldversion=$appversion
+    fi
+
     getAppVersion
 
     if [[ -z $appNewVersion ]]; then
-        message="Installed $name"
+        message="$logcode Installed $name"
+    elif [[ -z $oldversion ]]; then
+        message="$logcode Installed $name (version $appNewVersion)"
     else
-        message="Installed $name, version $appNewVersion"
+        message="$logcode Updated $name (old: $oldversion, new: $appNewVersion)"
     fi
 
     printlog "$message" REQ

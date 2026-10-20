@@ -338,6 +338,16 @@ datadogAPI=""
 # Simply add your own API key for this in order to have logs sent to Datadog
 # See more here: https://www.datadoghq.com/product/log-management/
 
+# Advanced version comparison
+ADVANCED_VERSION_COMPARISON=""
+# options:
+#   - yes   Use more advanced version comparison.
+# By default Installomator will allways attempt to update an application if the installed
+# version is different from the version found online, even if the installed version is 
+# higher. This option will not perform an update if the installed version is higher.
+# Note: Version comparison only works for version formats containing numbers and dots.
+# If any other character is found, it will use the default version comparison.
+
 # Log Date format used when parsing logs for debugging, this is the default used by
 # install.log, override this in the case statements if you need something custom per
 # application (See adobeillustrator).  Using stadard GNU Date formatting.
@@ -418,6 +428,12 @@ displaydialogContinue() { # $1: message $2: title
 
 displaynotification() { # $1: message $2: title
     message=${1:-"Message"}
+
+    if [[ -n "$logcode" && "${message#$logcode}" != "$message" ]]; then
+        message="${message#$logcode}"
+        message="${message# }"
+    fi
+
     title=${2:-"Notification"}
     manageaction="/Library/Application Support/JAMF/bin/Management Action.app/Contents/MacOS/Management Action"
     hubcli="/usr/local/bin/hubcli"
@@ -844,8 +860,8 @@ installAppWithPath() { # $1: path to app to install in $targetDir $2: path to fo
 
     # app versioncheck
     appNewVersion=$(defaults read $appPath/Contents/Info.plist $versionKey)
-    if [[ -n $appNewVersion && $appversion == $appNewVersion ]]; then
-        printlog "Downloaded version of $name is $appNewVersion on versionKey $versionKey, same as installed."
+    if [[ -n $appNewVersion ]] && [[ -n $appversion ]] && is-at-least $appNewVersion $appversion; then
+        printlog "Downloaded version of $name is $appNewVersion on versionKey $versionKey, same or older as installed version $appversion."
         if [[ $INSTALL != "force" ]]; then
             message="$name, version $appNewVersion, is the latest version."
             if [[ $currentUser != "loginwindow" && $NOTIFY == "all" ]]; then
@@ -1266,12 +1282,19 @@ finishing() {
     printlog "Finishing..."
 
     sleep 3 # wait a moment to let spotlight catch up
+
+    if [[ $appversion ]]; then
+        oldversion=$appversion
+    fi
+
     getAppVersion
 
     if [[ -z $appNewVersion ]]; then
-        message="Installed $name"
+        message="$logcode Installed $name"
+    elif [[ -z $oldversion ]]; then
+        message="$logcode Installed $name (version $appNewVersion)"
     else
-        message="Installed $name, version $appNewVersion"
+        message="$logcode Updated $name (old: $oldversion, new: $appNewVersion)"
     fi
 
     printlog "$message" REQ
@@ -1772,9 +1795,9 @@ adobecreativeclouddesktop)
         exit 75
     fi
     if [[ "$(arch)" == "arm64" ]]; then
-        downloadURL=$(curl -fs "https://helpx.adobe.com/in/download-install/apps/download-install-apps/creative-cloud-apps/download-creative-cloud-desktop-app-using-direct-links.html" | grep -o 'https.*macarm64.*dmg' | head -1 | cut -d '"' -f1)
+        downloadURL=$(curl -fs "https://helpx.adobe.com/download-install/apps/download-install-apps/creative-cloud-apps/download-creative-cloud-desktop-app-using-direct-links.html" | grep -o 'https.*macarm64.*dmg' | head -1 | cut -d '"' -f1)
     else
-        downloadURL=$(curl -fs "https://helpx.adobe.com/in/download-install/apps/download-install-apps/creative-cloud-apps/download-creative-cloud-desktop-app-using-direct-links.html" | grep -o 'https.*osx10.*dmg' | head -1 | cut -d '"' -f1)
+        downloadURL=$(curl -fs "https://helpx.adobe.com/download-install/apps/download-install-apps/creative-cloud-apps/download-creative-cloud-desktop-app-using-direct-links.html" | grep -o 'https.*osx10.*dmg' | head -1 | cut -d '"' -f1)
     fi
     appNewVersion=$(echo $downloadURL | grep -o '[^x]*$' | cut -d '.' -f 1 | sed 's/_/\./g')
     appCustomVersion() { defaults read "/Library/Application Support/Adobe/Adobe Desktop Common/ADS/Adobe Desktop Service.app/Contents/Info.plist" CFBundleShortVersionString 2>/dev/null }
@@ -2834,6 +2857,13 @@ beekeeperstudio)
     fi
     downloadURL="$(downloadURLFromGit beekeeper-studio beekeeper-studio)"
     expectedTeamID="7KK583U8H2"
+    ;;
+beidtoken)
+    name="BEIDToken"
+    type="pkgInDmg"
+    downloadURL="$(curl -fsL https://eid.belgium.be/en/download/16/license | grep -o 'https:\/\/eid\.belgium\.be\/sites\/default\/files\/software\/eID-Quickinstaller-[0-9/.]*dmg')"
+    appNewVersion="$(echo $downloadURL | grep -o '[0-9/.]*dmg' | sed 's/....$//')"
+    expectedTeamID="EU27N85PBZ"
     ;;
 betterdisplay)
     name="BetterDisplay"
@@ -3896,11 +3926,23 @@ cisdemdocumentreader)
 citrixworkspace)
     name="Citrix Workspace"
     type="pkgInDmg"
-    pkgName="Install Citrix Workspace.pkg"
     curlOptions=( --user-agent "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36" )
-    citrixWorkspaceData=$(curl -fsL "https://www.citrix.com/downloads/workspace-app/mac/workspace-app-for-mac-latest.html" "${curlOptions[@]}")
-    downloadURL="https:$(xmllint --html --xpath "string(//a[contains(@class, 'ctx-dl-link')]/@rel)" 2>/dev/null <(print "$citrixWorkspaceData"))"
-    appNewVersion=$(xmllint --html --xpath "string(//div[@class='ctx-dl-content']/p[starts-with(., 'Version')])" 2>/dev/null <(print "$citrixWorkspaceData") | sed -nE 's/.*Version[[:space:]]+([0-9.]+).*/\1/p')
+    parseURL() {
+        urlToParse='https://www.citrix.com/downloads/workspace-app/mac/workspace-app-for-mac-latest.html'
+        htmlDocument=$(curl -s -L "$urlToParse" $curlOptions)
+        xmllint --html --xpath \
+            "string(//a[contains(@class, 'ctx-dl-link')]/@rel)" \
+            2>/dev/null <(print "$htmlDocument")
+    }
+    downloadURL="https:$(parseURL)"
+    newVersionString() {
+        urlToParse='https://www.citrix.com/downloads/workspace-app/mac/workspace-app-for-mac-latest.html'
+        htmlDocument=$(curl -fs "$urlToParse" $curlOptions)
+        xmllint --html --xpath \
+            "string(//div[@class='ctx-dl-content']/p[starts-with(., 'Version')])" \
+            2>/dev/null <(print "$htmlDocument")
+    }
+    appNewVersion=$(newVersionString | sed -nE 's/.*Version[[:space:]]+([0-9.]+).*/\1/p')
     versionKey="CitrixVersionString"
     expectedTeamID="S272Y5R93J"
     ;;
@@ -5115,7 +5157,13 @@ egnytewebedit)
     blockingProcesses=( NONE )
     ;;
     
-elan)
+eidviewer)
+    name="eID Viewer"
+    type="dmg"
+    downloadURL="$(curl -fsL https://eid.belgium.be/en/download/22/license | grep -o 'https:\/\/eid\.belgium\.be\/sites\/default\/files\/software\/eID%20Viewer-[0-9/.]*dmg')"
+    appNewVersion="$(echo $downloadURL | grep -o '[0-9/.]*dmg' | sed 's/....$//')"
+    expectedTeamID="EU27N85PBZ"
+    ;;elan)
     elanVersion="$(curl -fs https://archive.mpi.nl/tla/elan/download | grep -o -m2 "ELAN_*.*_mac.dmg" | sed -n '1p' | cut -d "_" -f2)"
     appNewVersion="${elanVersion:0:1}.${elanVersion:2:1}"
     expectedTeamID="P7N398ZW7F"
@@ -6282,17 +6330,15 @@ gotowebinar)
     expectedTeamID="GFNFVT632V"
     ;;
 gpgsuite)
-    # credit: Micah Lee (@micahflee)
     name="GPG Suite"
     type="pkgInDmg"
     pkgName="Install.pkg"
-    downloadURL=$(curl -s https://gpgtools.com/ | grep https://releases.gpgtools.com/GPG_Suite- | grep Download | cut -d'"' -f4)
-    appNewVersion=$(echo $downloadURL | cut -d "-" -f 2 | cut -d "." -f 1-2)
+    downloadURL=$(curl -fsL "https://gpgtools.org/" | grep -oE 'https://releases\.gpgtools\.com/[^"]*GPG_Suite-[^"]*\.dmg' | head -n 1)
+    appNewVersion=$(sed -E 's#^.*/GPG_Suite-([^/]+)\.dmg$#\1#' <<< "$downloadURL")
+    appCustomVersion(){ /usr/bin/defaults read "/Library/Application Support/GPGTools/version.plist" CFBundleVersion; }
+    blockingProcesses=( NONE )
     expectedTeamID="PKV8ZPD836"
-    blockingProcesses=( "GPG Keychain" )
-    appCustomVersion(){ defaults read /Library/Application\ Support/GPGTools/version.plist CFBundleShortVersionString }
-    ;;
-gpgsync)
+    ;;gpgsync)
     name="GPG Sync"
     type="pkg"
     packageID="org.firstlook.gpgsync"
@@ -8583,6 +8629,7 @@ microsoftedgeenterprisestable)
     appNewVersion=$(curl -fsIL "$downloadURL" | grep -i location: | grep -o "/MicrosoftEdge.*pkg" | sed -E 's/.*\/[a-zA-Z]*-([0-9.]*)\..*/\1/g')
     expectedTeamID="UBF8T346G9"
     ;;
+    
 microsoftedgebeta)
     name="Microsoft Edge Beta"
     type="pkg"
@@ -8740,13 +8787,10 @@ microsoftonedrive-rollingoutdeferred)
     #updateToolArguments=( --install --apps ONDR18 )
     ;;
 microsoftonedrive)
-    # This version match the Last Released Production version setting of OneDrive update channel. It’s default if no update channel setting for OneDrive updates has been specified. Enterprise (Deferred) is also supported with label “microsoftonedrive-deferred”.
-    # https://support.microsoft.com/en-us/office/onedrive-release-notes-845dcf18-f921-435e-bf28-4e24b95e5fc0#OSVersion=Mac
     name="OneDrive"
     type="pkg"
-    MAUSource="https://oneclient.sfx.ms/Mac/Prod/b9de6823d5a66c7cc845b2dbf90f4935c002aeaf.xml"
-    downloadURL=$(curl -fsL $MAUSource | xmllint --xpath '//array/dict[1]/key[text()="UniversalPkgBinaryURL"]/following-sibling::string[1]/text()' - 2>/dev/null)
-    appNewVersion=$(curl -fsL $MAUSource | xmllint --xpath '//array/dict[1]/key[text()="CFBundleShortVersionString"]/following-sibling::string[1]/text()' - 2>/dev/null)
+    downloadURL=$(curl -fsL https://raw.githubusercontent.com/cocopuff2u/MOFA/refs/heads/main/latest_raw_files/macos_standalone_onedrive_all.xml | grep full_update_download | head -1 | grep -o https://oneclient.sfx.ms/Mac/Installers/\[0-9.]\*/universal/OneDrive.pkg)
+    appNewVersion=$(print $downloadURL | grep -o '[0-9.]\{5,\}' | cut -d "." -f 1-3)
     expectedTeamID="UBF8T346G9"
     ;;
 microsoftonedrivereset)
@@ -12261,6 +12305,17 @@ teamviewerqs)
     appNewVersion=$(getJSONValue "$(curl -fsL https://www.teamviewer.com/en/solutions/use-cases/quicksupport/ | grep .dmg |  grep -o 'data-json="[^"]*"' | sed 's/data-json="//;s/"$//' | sed 's/&quot;/"/g' )" "data[0].versionNumber")
     expectedTeamID="H7UGFBUGV6"
     ;;
+teamviewerqsallington)
+    name="TeamViewerQS"
+    type="zip"
+    teamviewerCustomDownloadURL="https://get.teamviewer.com/bp3qnrz"
+    teamviewerConfigID=$(curl -fs ${teamviewerCustomDownloadURL} -H 'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36' | grep -o 'var configId = ".*"' | awk -F'"' '{ print $2 }')
+    teamviewerVersion=$(curl -fs ${teamviewerCustomDownloadURL} -H 'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36' | grep -o 'var version = ".*"' | awk -F'"' '{ print $2 }')
+    downloadURL=$(curl -fs -X POST --url "https://get.teamviewer.com/api/CustomDesign" --header 'Content-Type: application/json; charset=utf-8' -H 'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36' --data '{ "ConfigId": "'"$teamviewerConfigID"'", "Version": "'"$teamviewerVersion"'", "IsCustomModule": true, "Subdomain": "1", "ConnectionId": "" }' | tr -d '"')
+    appNewVersion=$(curl -fs "https://www.teamviewer.com/en/download/macos/" | grep 'data-json' | grep 'full' | awk -F '"' '{ print $4 }' | sed 's/&quot;/"/g' | plutil -extract "data.0.versionNumber" raw -o - -)
+    appName="TeamViewerQS.app"
+    expectedTeamID="H7UGFBUGV6"
+    ;;
 teamviewerqscustom)
     name="TeamViewerQS"
     type="zip"
@@ -13243,10 +13298,9 @@ vysor)
 wacomdrivers)
     name="Wacom Center"
     type="pkgInDmg"
-    downloadURL="$(curl -fs https://www.wacom.com/en-us/support/product-support/drivers | grep -e "drivers/mac/professional.*dmg" | head -1 | tr '"' "\n" | grep -i http)"
+    downloadURL="$(curl -fs -A "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36" https://www.wacom.com/en-us/support/product-support/drivers | grep -e "drivers/mac/professional.*dmg" | head -1 | tr '"' "\n" | grep -i http)"
     expectedTeamID="EG27766DY7"
-    #pkgName="Install Wacom Tablet.pkg"
-    appNewVersion="$(curl -fs https://www.wacom.com/en-us/support/product-support/drivers | grep mac/professional/releasenotes | head -1 | tr '"' "\n" | grep -e "Driver [0-9][-0-9.]*" | sed -E 's/Driver ([-0-9.]*).*/\1/g')"
+    appNewVersion="$(curl -fs -A "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36" https://www.wacom.com/en-us/support/product-support/drivers | grep mac/professional/releasenotes | head -1 | tr '"' "\n" | grep -e "Driver [0-9][-0-9.]*" | sed -E 's/Driver ([-0-9.]*).*/\1/g')"
     ;;
 wallyezflash)
     name="Wally"
@@ -13978,9 +14032,11 @@ zulujdkfx17)
 *)
     # unknown label
     #printlog "unknown label $label"
-    cleanupAndExit 1 "unknown label $label" ERROR
+    cleanupAndExit 1 "EXIT: unknown label $label" ERROR
     ;;
 esac
+
+logcode="LOGANALYZER :"
 
 # MARK: reading arguments again
 printlog "Reading arguments again: ${argumentsArray[*]}" INFO
@@ -14044,7 +14100,7 @@ printlog "updateToolRunAsCurrentUser=${updateToolRunAsCurrentUser}" DEBUG
 if [[ ${INTERRUPT_DND} = "no" ]]; then
     # Check if a fullscreen app is active
     if hasDisplaySleepAssertion; then
-        cleanupAndExit 24 "active display sleep assertion detected, aborting" ERROR
+        cleanupAndExit 24 "$logcode active display sleep assertion detected, aborting" ERROR
     fi
 fi
 
@@ -14155,7 +14211,7 @@ if [ -z "$targetDir" ]; then
         updateronly)
             ;;
         *)
-            cleanupAndExit 99 "Cannot handle type $type" ERROR
+            cleanupAndExit 99 "$logcode Cannot handle type $type" ERROR
             ;;
     esac
 fi
@@ -14177,21 +14233,22 @@ fi
 # NOTE: change directory to temporary working directory
 printlog "Changing directory to $tmpDir" DEBUG
 if ! cd "$tmpDir"; then
-    cleanupAndExit 13 "error changing directory $tmpDir" ERROR
+    cleanupAndExit 13 "$logcode error changing directory $tmpDir" ERROR
 fi
 
 # MARK: get installed version
 getAppVersion
 printlog "appversion: $appversion"
 
-# NOTE: Exit if new version is the same as installed version (appNewVersion specified)
+# NOTE: Exit if new version is the same or older as installed version (appNewVersion specified)
 if [[ "$type" != "updateronly" && ($INSTALL == "force" || $IGNORE_APP_STORE_APPS == "yes") ]]; then
     printlog "Label is not of type “updateronly”, and it’s set to use force to install or ignoring app store apps, so not using updateTool."
     updateTool=""
 fi
 if [[ -n $appNewVersion ]]; then
     printlog "Latest version of $name is $appNewVersion"
-    if [[ $appversion == $appNewVersion ]]; then
+
+    if [[ -n $appversion ]] && is-at-least $appNewVersion $appversion; then
         if [[ $DEBUG -ne 1 ]]; then
             printlog "There is no newer version available."
             if [[ $INSTALL != "force" ]]; then
@@ -14204,7 +14261,11 @@ if [[ -n $appNewVersion ]]; then
                     updateDialog "complete" "Latest version already installed..."
                     sleep 2
                 fi
-                cleanupAndExit 0 "No newer version." REQ
+                if [[ $appNewVersion == $appversion ]]; then
+                    cleanupAndExit 0 "$logcode No newer version. $appNewVersion is the same as $appversion." REQ
+                else
+                    cleanupAndExit 0 "$logcode No newer version. $appNewVersion is older than $appversion" REQ
+                fi
             fi
         else
             printlog "DEBUG mode 1 enabled, not exiting, but there is no new version of app." WARN
@@ -14222,9 +14283,9 @@ if [[ (-n $appversion && -n "$updateTool") || "$type" == "updateronly" ]]; then
     if [[ $DEBUG -ne 1 ]]; then
         if runUpdateTool; then
             finishing
-            cleanupAndExit 0 "updateTool has run" REQ
+            cleanupAndExit 0 "$logcode updateTool has run" REQ
         elif [[ $type == "updateronly" ]];then
-            cleanupAndExit 0 "type is $type so we end here." REQ
+            cleanupAndExit 0 "$logcode type is $type so we end here." REQ
         fi # otherwise continue
     else
         printlog "DEBUG mode 1 enabled, not running update tool" WARN
@@ -14288,10 +14349,10 @@ else
         if [[ $archiveType == *ASCII* ]]; then
             firstLines=$(head -c 51170 $archiveName)
             deduplicatelogs $firstLines
-            cleanupAndExit 2 "File Downloaded is ASCII, we’re probably being blocked by a proxy or filter.  First 5k of file is:\n$logoutput" ERROR
+            cleanupAndExit 2 "$logcode File Downloaded is ASCII, we’re probably being blocked by a proxy or filter.  First 5k of file is:\n$logoutput" ERROR
         else
             deduplicatelogs "$curlDownload"
-            cleanupAndExit 2 "Error downloading $downloadURL error:\n$logoutput" ERROR
+            cleanupAndExit 2 "$logcode Error downloading $downloadURL error:\n$logoutput" ERROR
         fi
     fi
 fi
@@ -14351,7 +14412,7 @@ case $type in
         installItemInDmgInZip
         ;;
     *)
-        cleanupAndExit 99 "Cannot handle type $type" ERROR
+        cleanupAndExit 99 "$logcode Cannot handle type $type" ERROR
         ;;
 esac
 

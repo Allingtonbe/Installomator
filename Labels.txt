@@ -127,6 +127,7 @@ bbedit
 bbeditpkg
 beamstudio
 beekeeperstudio
+beidtoken
 betterdisplay
 bettershot
 bettertouchtool
@@ -371,7 +372,7 @@ editshare-flowstory
 egnyte
 egnytecore
 egnytewebedit
-elan
+eidviewer
 elasticvue
 element
 elevate24
@@ -497,7 +498,6 @@ gotiengviet
 gotomeeting
 gotowebinar
 gpgsuite
-gpgsync
 gram
 grammarly
 grandperspective
@@ -1159,6 +1159,7 @@ teamviewer
 teamviewerhost
 teamviewerhostcustom
 teamviewerqs
+teamviewerqsallington
 teamviewerqscustom
 teamwire
 techsmithaudiate

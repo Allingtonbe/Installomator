@@ -362,8 +362,8 @@ if [[ $(/usr/bin/arch) == "arm64" ]]; then
         rosetta2=no
     fi
 fi
-VERSION="10.10beta"
-VERSIONDATE="2026-10-13"
+VERSION="10.10.2"
+VERSIONDATE="2026-10-20"
 
 # MARK: Functions
 
@@ -1436,7 +1436,12 @@ updateDialog() {
             echo "progress: $progress" >> $cmd_file
         fi
         if [[ $message != "" ]]; then
-            echo "progresstext: $message" >> $cmd_file
+            if [[ $appNewVersion != "" ]]; then
+                appVersionProgressText=${appNewVersion// /}
+                echo "progresstext: v$appVersionProgressText $message" >> $cmd_file
+            else
+                echo "progresstext: $message" >> $cmd_file
+            fi
         fi
     else
         # list item has a value, so we update the progress and text in the list
@@ -2261,7 +2266,7 @@ androidstudio)
     androidXML="https://dl.google.com/android/studio/patches/updates.xml"
     appNewVersion=$(curl -fsSL "$androidXML" | xmllint --xpath 'string((//channel[@status="release"]/build)[1]/@number)' - 2>/dev/null)
     expectedTeamID="EQHXZ8M8AV"
-    blockingProcesses=( androidstudio )
+    blockingProcesses=( studio )
     versionKey="CFBundleVersion"
     ;;
 ankerwork)
@@ -5360,8 +5365,8 @@ examplify)
     expectedTeamID="5P9D4ESR3W"
     blockingProcesses=("Examplify")
     ;;
-exelbanstats)
-    # credit: Søren Theilgaard (@theilgaard)
+exelbanstats|\
+stats)
     name="Stats"
     type="dmg"
     downloadURL=$(downloadURLFromGit exelban stats)
@@ -5460,6 +5465,20 @@ ffmpegmartinriedl)
     downloadURL="https://ffmpeg.martin-riedl.de/redirect/latest/macos/${archDir}/release/ffmpeg.pkg"
     appNewVersion=$(curl -fsL -r 0-0 -o /dev/null -w '%{url_effective}' "$downloadURL" | sed -E 's#^.*/[0-9]+_([0-9]+(\.[0-9]+)+)/ffmpeg\.pkg$#\1#')
     appCustomVersion() { /usr/local/bin/ffmpeg -version 2>/dev/null | awk 'NR==1 { sub(/^ffmpeg version /, ""); sub(/-https:.*/, ""); print $1 }'; }
+    expectedTeamID="KU3N25YGLU"
+    blockingProcesses=( NONE )
+    ;;
+ffprobemartinriedl)
+    name="FFprobe"
+    type="pkg"
+    if [[ $(arch) == "arm64" ]]; then
+        archDir="arm64"
+    else
+        archDir="amd64"
+    fi
+    downloadURL="https://ffmpeg.martin-riedl.de/redirect/latest/macos/${archDir}/release/ffprobe.pkg"
+    appNewVersion=$(curl -fsL -r 0-0 -o /dev/null -w '%{url_effective}' "$downloadURL" | sed -E 's#^.*/[0-9]+_([0-9]+(\.[0-9]+)+)/ffprobe\.pkg$#\1#')
+    appCustomVersion() { /usr/local/bin/ffprobe -version 2>/dev/null | awk 'NR==1 { sub(/^ffprobe version /, ""); sub(/-https:.*/, ""); print $1 }'; }
     expectedTeamID="KU3N25YGLU"
     blockingProcesses=( NONE )
     ;;
@@ -7386,9 +7405,9 @@ jitsimeet)
 joplin)
     name="Joplin"
     type="dmg"
-    if [[ "$arch" == "arm64" ]]; then
+    if [[ "$(arch)" == "arm64" ]]; then
         archiveName="arm64.DMG"
-    elif [[ "$arch" == "i386" ]]; then
+    elif [[ "$(arch)" == "i386" ]]; then
         archiveName=".dmg"
     fi
     downloadURL=$(downloadURLFromGit laurent22 joplin)
@@ -8281,6 +8300,14 @@ macports)
     updateToolArguments="selfupdate"
     expectedTeamID="QTA3A3B7F3"
     ;;
+macshot)
+    name="macshot"
+    type="dmg"
+    archiveName="MacShot.dmg[0-9.]*"
+    downloadURL="$(downloadURLFromGit sw33tLie macshot)"
+    appNewVersion="$(versionFromGit sw33tLie macshot)"
+    expectedTeamID="BR52ZWX528"
+    ;;
 mactexbasic|\
 basictex)
     name="MacTeX Basic"
@@ -8357,9 +8384,9 @@ magicbullet)
 magnolia)
     name="Magnolia"
     type="dmg"
-    if [[ "$arch" == "arm64" ]]; then
+    if [[ "$(arch)" == "arm64" ]]; then
         archiveName="Magnolia-mac-arm64\\.dmg"
-    elif [[ "$arch" == "i386" ]]; then
+    elif [[ "$(arch)" == "i386" ]]; then
         archiveName="Magnolia-mac-x64\\.dmg"
     fi
     downloadURL=$(downloadURLFromGit caledavis Magnolia)
@@ -9027,6 +9054,16 @@ microsoftremotedesktop)
     updateTool="/Library/Application Support/Microsoft/MAU2.0/Microsoft AutoUpdate.app/Contents/MacOS/msupdate"
     updateToolArguments=( --install --apps MSRD10 )
     ;;
+microsoftwindowsappbeta)
+    name="Windows App Beta"
+    type="zip"
+    appCenterURL=$(curl -fs -o /dev/null -w '%{redirect_url}' "https://aka.ms/rdmacbeta" | sed -nE 's#^https://install\.appcenter\.ms/orgs/([^/]+)/apps/([^/]+)/distribution_groups/([^/?]+).*#https://install.appcenter.ms/api/v0.1/apps/\1/\2/distribution_groups/\3#p')
+    appCenterRelease=$(curl -fsL "${appCenterURL}/releases/$(curl -fsL "${appCenterURL}/public_releases" | plutil -extract 0.id raw -o - - 2>/dev/null)")
+    downloadURL=$(plutil -extract download_url raw -o - - <<< "$appCenterRelease" 2>/dev/null)
+    appNewVersion=$(plutil -extract version raw -o - - <<< "$appCenterRelease" 2>/dev/null)
+    versionKey="CFBundleVersion"
+    expectedTeamID="UBF8T346G9"
+    ;;
 microsoftword)
     name="Microsoft Word"
     type="pkg"
@@ -9108,7 +9145,8 @@ miro)
     fi
     expectedTeamID="M3GM7MFY7U"
     ;;
-missive)
+missive|\
+missiveapp)
     name="Missive"
     type="dmg"
     downloadURL="https://mail.missiveapp.com/download/mac"
@@ -9875,10 +9913,14 @@ onscreencontrol)
 onyx)
     name="OnyX"
     type="dmg"
-    osVersion=$( sw_vers -productVersion | cut -f1 -d'.' )
-    downloadURL="https://www.titanium-software.fr/download/$osVersion/OnyX.dmg"
-    appNewVersion=$( curl -fs https://www.titanium-software.fr/en/onyx.html | grep -Eo "OnyX [0-9]+\.[0-9]+\.[0-9]+ for macOS [^ ]+ $osVersion" | awk '{print $2}' | sort -Vr | head -1 )
-    versionKey="CFBundleShortVersionString"
+    osVersion="${installedOSversion%%.*}"
+    if [[ "$(arch)" == "i386" && "$osVersion" -ge 27 ]]; then
+        printlog "OnyX for macOS ${osVersion} requires Apple Silicon (arm64)." ERROR
+        cleanupAndExit 95 "OnyX requires Apple Silicon on macOS ${osVersion}" ERROR
+    else
+        downloadURL="https://www.titanium-software.fr/download/$osVersion/OnyX.dmg"
+    fi
+    appNewVersion=$(curl -fs https://www.titanium-software.fr/en/onyx.html | sed -nE "s/.*OnyX ([0-9]+([.][0-9]+)+) for macOS [A-Za-z ]+ ${osVersion}[^0-9].*/\\1/p" | head -1)
     expectedTeamID="T49MRBL8UL"
     ;;
 opencode)
@@ -10774,14 +10816,6 @@ realvncserver)
     downloadURL="https://downloads.realvnc.com/download/file/vnc.files/VNC-Server-$appNewVersion-MacOSX-universal.pkg"
     expectedTeamID="ZNCQ8JEH7X"
     ;;
-realvncviewer)
-    name="Real VNC Viewer"
-    appName="VNC Viewer.app"
-    type="dmg"
-    downloadURL="https://downloads.realvnc.com/download/file/viewer.files/VNC-Viewer-Latest-MacOSX-universal.dmg"
-    appNewVersion="$(curl -sL https://realvnc.zendesk.com/api/v2/help_center/en-us/articles/5835892358941.json | sed -n 's/.*VNC-Viewer-\([0-9.]*\)-MacOSX.*/\1/p')"
-    expectedTeamID="ZNCQ8JEH7X"
-    ;;
 reaper)
     name="REAPER"
     type="dmg"
@@ -11317,10 +11351,10 @@ shotcut)
     ;;
 shottr)
     name="Shottr"
-    type="dmg"
-    downloadURL="https://shottr.cc$(curl -fs "https://shottr.cc/newversion.html" | grep -o '\/dl\/Shottr-[0-9.]*\.dmg' | head -1 | xargs)"
-    appNewVersion=$(echo $downloadURL | grep -oE '[0-9]+\.[0-9]+(\.[0-9]+)?' | head -1 | xargs)
-    [[ "$appNewVersion" =~ ^[0-9]+\.[0-9]+$ ]] && appNewVersion="${appNewVersion}.0"
+    type="pkg"
+    shottrJSON=$(curl -fs https://shottr.cc/api/version.json)
+    downloadURL=$(getJSONValue "$shottrJSON" "package")
+    appNewVersion=$(getJSONValue "$shottrJSON" "latestVersion")
     expectedTeamID="2Y683PRQWN"
     ;;
 sidekick)
@@ -11614,19 +11648,15 @@ snapgeneviewer)
     expectedTeamID="WVCV9Q8Y78"
     ;;
 snowflakeodbc)
-	name="Snowflake ODBC Driver"
-	type="pkgInDmg"
-	pkgName="snowflakeODBC.pkg"
-	packageID="net.snowflake.odbc"
-	expectedTeamID="W4NT6CRQ7U"
-	odbcYear=$(date +%Y)
-	appNewVersion=$(curl -fsL "https://docs.snowflake.com/en/release-notes/clients-drivers/odbc-${odbcYear}" | grep -oE "Version [0-9]+\.[0-9]+\.[0-9]+" | head -1 | awk '{print $2}')
-	if [[ -z "$appNewVersion" ]]; then
-		odbcYear=$((odbcYear - 1))
-		appNewVersion=$(curl -fsL "https://docs.snowflake.com/en/release-notes/clients-drivers/odbc-${odbcYear}" | grep -oE "Version [0-9]+\.[0-9]+\.[0-9]+" | head -1 | awk '{print $2}')
-	fi
-	downloadURL="https://sfc-repo.snowflakecomputing.com/odbc/macuniversal/${appNewVersion}/snowflake_odbc_mac_64universal-${appNewVersion}.dmg"
-	;;
+    name="Snowflake ODBC Driver"
+    type="pkgInDmg"
+    packageID="net.snowflake.odbc"
+    expectedTeamID="W4NT6CRQ7U"
+    odbcRepo="https://sfc-repo.snowflakecomputing.com/odbc/macuniversal"
+    appNewVersion=$(curl -fsL "$odbcRepo/" | grep -oE 'href="[0-9]+\.[0-9]+\.[0-9]+/index\.html"' | sed -E 's#href="([0-9]+\.[0-9]+\.[0-9]+)/index\.html"#\1#' | sort -t. -k1,1nr -k2,2nr -k3,3nr | head -n 1)
+    pkgName="snowflake-odbc-$appNewVersion.universal.pkg"
+    downloadURL="$odbcRepo/$appNewVersion/snowflake-odbc-$appNewVersion.universal.dmg"
+    ;;
 soapuiopensource)
     soapuiJSON=$(curl -fsL "https://api.github.com/repos/SmartBear/soapui/releases/latest")
     appNewVersion=$(getJSONValue "$soapuiJSON" "tag_name" | sed 's/^v//')
@@ -11660,7 +11690,16 @@ softubecentral)
 solstice)
     name="Mersive Solstice"
     type="dmg"
-    downloadURL="https://www.mersive.com/files/41693/"
+    downloadURL=$(curl -fsSL "https://www.mersive.com/downloads" |
+        grep -E 'Mac Apple|Mac Intel' |
+        grep -oE 'https?[^"]+SolsticeClient-[^"]+\.dmg' |
+        if [[ "$(arch)" == "arm64" ]]; then
+            head -n 1
+        else
+            tail -n 1
+        fi
+    )
+    appNewVersion=$(basename "$downloadURL" .dmg | cut -d '-' -f 2)
     expectedTeamID="63B5A5WDNG"
     ;;
 sonicpi)
@@ -12691,7 +12730,7 @@ topazgigapixelai)
     type="pkg"
     versionKey="CFBundleShortVersionString"
     downloadURL="https://topazlabs.com/d/gigapixel/latest/mac/full"
-    archiveName=$(curl -fsIL $downloadURL | grep -i ^location | awk -F "/" '{print $NF}')
+    archiveName=$(curl -fsIL $downloadURL | grep -i ^location | awk -F "/" '{print $NF}' | tr -d '\r')
     appNewVersion=$(grep -oi "[0-9].*[0-9]" <<< $archiveName)
     expectedTeamID="3G3JE37ZHF"
     ;;

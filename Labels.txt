@@ -1160,7 +1160,6 @@ tailscale
 talkdeskcxcloud
 taskpaper
 teamviewer
-teamviewerhost
 teamviewerhostcustom
 teamviewerqs
 teamviewerqsallington

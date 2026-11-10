@@ -363,7 +363,7 @@ if [[ $(/usr/bin/arch) == "arm64" ]]; then
     fi
 fi
 VERSION="10.10.2"
-VERSIONDATE="2026-10-20"
+VERSIONDATE="2026-11-10"
 
 # MARK: Functions
 
@@ -12308,15 +12308,12 @@ taskpaper)
     ;;
 teamviewer)
     name="TeamViewer"
-    type="pkgInDmg"
-    versionKey="CFBundleShortVersionString"
-    pkgName="Install TeamViewer.app/Contents/Resources/Install TeamViewer.pkg"
-    teamViewerDownloadData=$(curl -fsL "https://www.teamviewer.com/en/download/macos/" | tr "<" "\n<" | grep "cmp-smartdownloadbutton__wrapper" | grep "TeamViewer full client" | sed -E 's/.*data-json="([^"]*)".*/\1/;s/&quot;/"/g;s/&amp;/\&/g')
-    downloadURL=$(getJSONValue "$teamViewerDownloadData" "data[0].downloadLink")
-    appNewVersion=$(getJSONValue "$teamViewerDownloadData" "data[0].versionNumber")
+    type="pkg"
+    teamViewerFeed=$(curl -fsL "https://download.teamviewer.com/download/update/macupdates.xml?lang=en&version=15.00.0&os=macos&osversion=27.0&type=1&channel=1")
+    downloadURL=$(echo "$teamViewerFeed" | xpath 'string((//rss/channel/item/enclosure[@teamviewer:module="full"][@teamviewer:kind="pkg"])[1]/@url)' 2>/dev/null)
+    appNewVersion=$(echo "$teamViewerFeed" | xpath 'string((//rss/channel/item/enclosure[@teamviewer:module="full"][@teamviewer:kind="pkg"])[1]/@sparkle:version)' 2>/dev/null)
     expectedTeamID="H7UGFBUGV6"
-    ;;
-teamviewerhost)
+    ;;teamviewerhost)
     name="TeamViewerHost"
     type="pkgInDmg"
     packageID="com.teamviewer.teamviewerhost"

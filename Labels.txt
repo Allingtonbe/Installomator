@@ -373,7 +373,7 @@ editshare-flowstory
 egnyte
 egnytecore
 egnytewebedit
-elan
+eidviewer
 elasticvue
 element
 elevate24
@@ -501,7 +501,6 @@ gotiengviet
 gotomeeting
 gotowebinar
 gpgsuite
-gpgsync
 gram
 grammarly
 grandperspective
@@ -1180,9 +1179,9 @@ tailscale
 talkdeskcxcloud
 taskpaper
 teamviewer
-teamviewerhost
 teamviewerhostcustom
 teamviewerqs
+teamviewerqsallington
 teamviewerqscustom
 teamwire
 techsmithaudiate

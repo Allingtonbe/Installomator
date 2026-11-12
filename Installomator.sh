@@ -1795,17 +1795,19 @@ adobecreativeclouddesktop)
     appName="Creative Cloud.app"
     type="dmg"
     if pgrep -q "Adobe Installer"; then
-        printlog "Adobe Installer is running, not a good time to update." WARN
-        printlog "################## End $APPLICATION \n\n" INFO
-        exit 75
+        cleanupAndExit 75 "Adobe Installer is running; Adobe Creative Cloud cannot be updated." WARN
     fi
-    if [[ "$(arch)" == "arm64" ]]; then
-        downloadURL=$(curl -fs "https://helpx.adobe.com/download-install/apps/download-install-apps/creative-cloud-apps/download-creative-cloud-desktop-app-using-direct-links.html" | grep -o 'https.*macarm64.*dmg' | head -1 | cut -d '"' -f1)
+    if [[ $(arch) == "arm64" ]]; then
+        adobeArch="macarm64"
     else
-        downloadURL=$(curl -fs "https://helpx.adobe.com/download-install/apps/download-install-apps/creative-cloud-apps/download-creative-cloud-desktop-app-using-direct-links.html" | grep -o 'https.*osx10.*dmg' | head -1 | cut -d '"' -f1)
+        adobeArch="osx10"
     fi
-    appNewVersion=$(echo $downloadURL | grep -o '[^x]*$' | cut -d '.' -f 1 | sed 's/_/\./g')
-    appCustomVersion() { defaults read "/Library/Application Support/Adobe/Adobe Desktop Common/ADS/Adobe Desktop Service.app/Contents/Info.plist" CFBundleShortVersionString 2>/dev/null }
+    adobeConfig=$(curl -fsSL "https://ffc-static-cdn.oobesaas.adobe.com/init/v1/$adobeArch/ccdConfig.json") || cleanupAndExit 14 "Could not retrieve Adobe Creative Cloud update configuration." ERROR
+    appNewVersion=$(getJSONValue "$(getJSONValue "$adobeConfig" ".features['feature-response']['feature-entry'].find(item => item.id == 'ccd.fw.update.greenline.latest').data")" "version")
+    [[ -n "$appNewVersion" ]] || cleanupAndExit 14 "Could not determine Adobe Creative Cloud version." ERROR
+    IFS='.' read -r major minor patch build <<< "$appNewVersion"
+    downloadURL="https://ccmdls.adobe.com/AdobeProducts/StandaloneBuilds/ACCC/ESD/$major.$minor.$patch/$build/$adobeArch/ACCCx${appNewVersion//./_}.dmg"
+    appCustomVersion() { sqlite3 "/Library/Application Support/Adobe/Adobe Desktop Common/pim.db" "SELECT value FROM pim_meta WHERE key='application_version';" 2>/dev/null; }
     targetDir="/Applications/Utilities/Adobe Creative Cloud/ACC/"
     installerTool="Install.app"
     CLIInstaller="Install.app/Contents/MacOS/Install"
@@ -1953,6 +1955,18 @@ airserver)
     downloadURL="https://www.airserver.com/download/mac/latest"
     appNewVersion=$(curl -fsIL "${downloadURL}" | grep -i "location" | sed -E 's/.*\/[a-zA-Z]*-([0-9.]*)\..*/\1/g' | head -1)
     expectedTeamID="6C755KS5W3"
+    ;;
+airstats)
+    name="AirStats"
+    type="dmg"
+    if [[ $(arch) == "arm64" ]]; then
+        downloadURL="$(downloadURLFromGit byrencheema airstats)"
+    else
+        printlog "AirStats is only compatible with Apple Silicon (arm64) Macs." ERROR
+        cleanupAndExit 95 "AirStats requires Apple Silicon" ERROR
+    fi
+    appNewVersion="$(versionFromGit byrencheema airstats)"
+    expectedTeamID="L77LA4GLFN"
     ;;
 airtable)
     name="Airtable"
@@ -2245,6 +2259,7 @@ anastasiysextensionmanager)
     name="ExtensionManager"
     type="zip"
     downloadURL="https://f000.backblazeb2.com/file/anastasiy-downloads/EM/ExtensionManager.zip"
+    appNewVersion=$(curl -fs "https://anastasiy.com/checkupdates.sp.xml?product=ExtensionManager" | xpath 'string(/rss/channel/item[last()]/enclosure/@*[local-name()="shortVersionString"])')
     expectedTeamID="D3SBBNFWTC"
     ;;
 androidfiletransfer)
@@ -2546,22 +2561,11 @@ arq7)
 arturiamcc)
     name="MIDI Control Center"
     type="pkg"
-    arturiaDetails="$(curl -fsL 'https://www.arturia.com/api/resources?slugs=mccu&types=soft')"
-    arturiaCount=0
-    maxEntries=$(getJSONValue "$arturiaDetails" "length" 2>/dev/null)
-    downloadURL=""
-    appNewVersion=""
-    while [[ $arturiaCount -lt $maxEntries ]]; do
-        arturiaPlatform=$(getJSONValue "$arturiaDetails" "[$arturiaCount].platform_type" 2>/dev/null)
-        if [[ $arturiaPlatform == "mac" ]]; then
-            downloadURL=$(getJSONValue "$arturiaDetails" "[$arturiaCount].permalink")
-            appNewVersion=$(getJSONValue "$arturiaDetails" "[$arturiaCount].version")
-            break
-        fi
-        arturiaCount=$((arturiaCount + 1))
-    done
+    pkgName=$(curl -fsL "https://www.arturia.com/support/downloads-manuals/product/mccu" | grep -oE 'MIDI_Control_Center__[0-9_]+\.pkg' | sort -u -t_ -k5,5n -k6,6n -k7,7n -k8,8n | tail -1)
+    downloadURL="https://www.arturia.com/api/download/products/mccu/soft/${pkgName}"
+    appNewVersion=$(echo "$pkgName" | sed -E 's/.*__([0-9_]+)\.pkg/\1/; s/_/./g')
     expectedTeamID="T53ZHSF36C"
-;;
+    ;;
 arturiasoftwarecenter)
     name="Arturia Software Center"
     type="pkg"
@@ -2792,13 +2796,6 @@ bambustudio)
     appNewVersion=$(versionFromGit "bambulab" "BambuStudio")
     expectedTeamID="T3UBR9Y3B2"
     ;;
-bartender)
-    # credit: Gabe Marchan (gabemarchan.com - @darklink87)
-    name="Bartender 4"
-    type="dmg"
-    downloadURL="https://www.macbartender.com/B2/updates/B4Latest/Bartender%204.dmg"
-    expectedTeamID="8DD663WDX4"
-    ;;
 basecamp3)
     name="Basecamp 3"
     type="zip"
@@ -2863,12 +2860,16 @@ beekeeperstudio)
     downloadURL="$(downloadURLFromGit beekeeper-studio beekeeper-studio)"
     expectedTeamID="7KK583U8H2"
     ;;
-beidtoken)
-    name="BEIDToken"
-    type="pkgInDmg"
-    downloadURL="$(curl -fsL https://eid.belgium.be/en/download/16/license | grep -o 'https:\/\/eid\.belgium\.be\/sites\/default\/files\/software\/eID-Quickinstaller-[0-9/.]*dmg')"
-    appNewVersion="$(echo $downloadURL | grep -o '[0-9/.]*dmg' | sed 's/....$//')"
-    expectedTeamID="EU27N85PBZ"
+beeperdesktop)
+    name="Beeper Desktop"
+    type="dmg"
+    if [[ $(arch) == "arm64" ]]; then
+        downloadURL="https://api.beeper.com/desktop/download/macos/arm64/stable/com.automattic.beeper.desktop"
+    else
+        downloadURL="https://api.beeper.com/desktop/download/macos/x64/stable/com.automattic.beeper.desktop"
+    fi
+    appNewVersion=$(curl -fsIL "${downloadURL}" | grep -i "^location" | grep -Eo '[0-9]+(\.[0-9]+)+' | tail -1)
+    expectedTeamID="PZYM8XX95Q"
     ;;
 betterdisplay)
     name="BetterDisplay"
@@ -2891,11 +2892,11 @@ bettershot)
     expectedTeamID="8JL39GK2DC"
     ;;
 bettertouchtool)
-    # credit: Søren Theilgaard (@theilgaard)
     name="BetterTouchTool"
     type="zip"
-    downloadURL="https://folivora.ai/releases/BetterTouchTool.zip"
-    appNewVersion=$(curl -fs https://updates.folivora.ai/bettertouchtool_release_notes.html | grep BetterTouchTool | head -n 2 | tail -n 1 | sed -E 's/.* ([0-9\.]*) .*/\1/g')
+    sparkleData=$(curl -fsL "https://updates.folivora.ai/appcast.xml")
+    appNewVersion=$(echo "$sparkleData" | xpath 'string((//*[local-name()="item"])[1]/enclosure/@*[local-name()="shortVersionString"])')
+    downloadURL=$(echo "$sparkleData" | xpath 'string((//*[local-name()="item"])[1]/enclosure/@url)')
     expectedTeamID="DAFVSXZ82P"
     ;;
 betterzip)
@@ -3127,6 +3128,7 @@ boxsync)
     type="dmg"
     downloadURL="https://e3.boxcdn.net/box-installers/sync/Sync+4+External/Box%20Sync%20Installer.dmg"
     expectedTeamID="M683GB7CPW"
+    printlog "WARNING: Box will end of life (EOL) Box Sync in December 2026. Box strongly advises migrating your users from Box Sync to Box Drive." REQ
     ;;
 boxtools)
     name="Box Tools"
@@ -3462,8 +3464,8 @@ captureonepro)
 carboncopycloner)
     name="Carbon Copy Cloner"
     type="zip"
-    downloadURL=$(curl -fsIL "https://api.bombich.com/download/ccc?v=latest" | grep -i ^location | sed -E 's/.*(https.*\.zip).*/\1/g')
-    appNewVersion=$(sed -E 's/.*-([0-9.]*)\.zip/\1/g' <<< $downloadURL | sed 's/\.[^.]*$//')
+    downloadURL=$(curl -fsL -o /dev/null -w '%{url_effective}' 'https://api.bombich.com/download/ccc?v=latest')
+    appNewVersion=$(echo "$downloadURL" | sed -E 's|.*/ccc-([0-9]+(\.[0-9]+)+)\.[0-9]+\.zip|\1|')
     expectedTeamID="L4F2DED5Q7"
     ;;
 cardpresso)
@@ -3520,6 +3522,17 @@ chatwork)
      downloadURL="https://desktop-app.chatwork.com/installer/Chatwork.dmg"
      expectedTeamID="H34A3H2Y54"
      ;;
+checkpointsase|\
+perimeter81|\
+harmonysase)
+    name="Checkpoint SASE"
+    type="pkg"    
+    downloadsPageURL="https://sc1.checkpoint.com/documents/Infinity_Portal/WebAdminGuides/EN/SASE-Admin-Guide/SASE_Security/Topics/download/introduction_to_the_downloads_page.html"
+    downloadURL=$(curl -fsSL "$downloadsPageURL" | grep -oE 'https://static\.perimeter81\.com/agents/mac/[^"]*\.pkg' | head -1)
+    versionFull=$(curl -fsIL "$downloadURL" | tr -d '\r' | grep -i '^x-amz-meta-version:' | sed -E 's/^[Xx]-[Aa]mz-[Mm]eta-[Vv]ersion: *//')
+    appNewVersion=$(echo "$versionFull" | sed -E 's/^([0-9]+\.[0-9]+\.[0-9]+)\.[0-9]+$/\1/')
+    expectedTeamID="924635PD62"
+    ;;
 chemdoodle|\
 chemdoodle2d)
     name="ChemDoodle"
@@ -3962,8 +3975,9 @@ claricopilot)
 claudedesktop)
     name="Claude"
     type="zip"
-    appNewVersion=$(curl -fs "https://downloads.claude.ai/releases/darwin/universal/RELEASES.json" | grep -o '"currentRelease":"[^"]*"' | cut -d'"' -f4)
-    downloadURL=$(curl -fs "https://downloads.claude.ai/releases/darwin/universal/RELEASES.json" | grep -o '"url":"[^"]*"' | cut -d'"' -f4)
+    releaseFeed=$(curl -fsL "https://downloads.claude.ai/releases/darwin/universal/RELEASES.json")
+    appNewVersion=$(getJSONValue "${releaseFeed}" "currentRelease")
+    downloadURL=$(getJSONValue "${releaseFeed}" "releases[0].updateTo.url")
     expectedTeamID="Q6L2SF6YDW"
     blockingProcesses=( "Claude" "Claude Helper" )
     ;;
@@ -4081,6 +4095,7 @@ cluefull)
 cmake)
     name="CMake"
     type="dmg"
+    archiveName="macos-universal.dmg"
     downloadURL=$(downloadURLFromGit Kitware CMake)
     appNewVersion=$(versionFromGit Kitware CMake)
     expectedTeamID="W38PE5Y733"
@@ -4720,6 +4735,19 @@ docker)
     expectedTeamID="9BNSXJN65R"
     blockingProcesses=( "Docker Desktop" )
     ;;
+dockersbx)
+    name="Sbx"
+    type="dmg"
+    archiveName="DockerSandboxes-darwin.dmg"
+    if [[ $(arch) == "arm64" ]]; then
+        downloadURL="$(downloadURLFromGit docker sbx-releases)"
+    else
+        printlog "Docker Sandboxes (Sbx) is only compatible with Apple Silicon (arm64) Macs." ERROR
+        cleanupAndExit 95 "Sbx requires Apple Silicon" ERROR
+    fi
+    appNewVersion=$(versionFromGit docker sbx-releases)
+    expectedTeamID="9BNSXJN65R"
+    ;;
 dockutil)
     name="dockutil"
     type="pkg"
@@ -5264,6 +5292,19 @@ epicgameslauncher)
 	versionKey="CFBundleShortVersionString"
 	expectedTeamID="96DBZ92D3Y"
 	;;
+epidemicsound)
+    name="Epidemic Sound"
+    type="dmg"
+    if [[ $(arch) == "arm64" ]]; then
+        downloadURL="https://storage.googleapis.com/es-plugin-builds/desktop/darwin/arm64/latest/Epidemic%20Sound-arm64.dmg"
+        epidemicsoundJSON=$(curl -fsL "https://storage.googleapis.com/es-plugin-builds/desktop/darwin/arm64/RELEASES.json")
+    elif [[ $(arch) == "i386" ]]; then
+        downloadURL="https://storage.googleapis.com/es-plugin-builds/desktop/darwin/x64/latest/Epidemic%20Sound-x64.dmg"
+        epidemicsoundJSON=$(curl -fsL "https://storage.googleapis.com/es-plugin-builds/desktop/darwin/x64/RELEASES.json")
+    fi
+    appNewVersion=$(getJSONValue "$epidemicsoundJSON" "currentRelease")
+    expectedTeamID="LE95XJ5KXM"
+    ;;
 eposconnect)
     name="EPOS Connect"
     type="pkg"
@@ -5291,23 +5332,12 @@ escrowbuddy)
     downloadURL=$(downloadURLFromGit macadmins escrow-buddy )
     expectedTeamID="T4SK8ZXCXG"
     ;;
-eshareosx)
-    name="e-Share"
-    type="pkg"
-    #packageID="com.ncryptedcloud.e-Share.pkg"
-    downloadURL=https://www.ncryptedcloud.com/static/downloads/osx/$(curl -fs https://www.ncryptedcloud.com/static/downloads/osx/ | grep -o -i "href.*\".*\"" | cut -d '"' -f2)
-    versionKey="CFBundleVersion"
-    appNewVersion=$( echo "${downloadURL}" | sed -E 's/.*\/[a-zA-Z\-]*_([0-9.]*)\.pkg/\1/g' )
-    expectedTeamID="X9MBQS7DDC"
-    ;;
 espanso)
     name="Espanso"
-    type="appInDmgInZip"
-    appName="Espanso.app"
-    archiveName="Espanso-Mac-Universal.zip"
-    pkgName="espanso/Espanso.dmg"
-    downloadURL="$(downloadURLFromGit espanso espanso)"
-    appNewVersion="$(versionFromGit espanso espanso)"
+    type="dmg"
+    archiveName="Espanso-Mac-Universal.dmg"
+    downloadURL=$(downloadURLFromGit espanso espanso)
+    appNewVersion=$(versionFromGit espanso espanso)
     expectedTeamID="6424323YUH"
     ;;
 etrecheck)
@@ -5578,6 +5608,14 @@ filemakerpro22)
     versionKey="BuildVersion"
     downloadURL=$(curl -fs https://www.filemaker.com/redirects/ss.txt | grep '\"PRO22MAC\"' | tail -1 | sed "s|.*url\":\"\(.*\)\".*|\\1|")
     appNewVersion=$(curl -fs https://www.filemaker.com/redirects/ss.txt | grep '\"PRO22MAC\"' | tail -1 | sed "s|.*fmp_\(.*\).dmg.*|\\1|")
+    expectedTeamID="J6K4T76U7W"
+    ;;
+filemakerpro26)
+    name="FileMaker Pro"
+    type="dmg"
+    versionKey="BuildVersion"
+    downloadURL=$(curl -fs https://www.filemaker.com/redirects/ss.txt | grep '\"PRO26MAC\"' | tail -1 | sed "s|.*url\":\"\(.*\)\".*|\\1|")
+    appNewVersion=$(curl -fs https://www.filemaker.com/redirects/ss.txt | grep '\"PRO26MAC\"' | tail -1 | sed "s|.*fmp_\(.*\).dmg.*|\\1|")
     expectedTeamID="J6K4T76U7W"
     ;;
 filmlab)
@@ -6093,20 +6131,22 @@ githubdesktop)
     ;;
 gitkraken)
     name="GitKraken"
-    type="dmg"
+    type="zip"
     if [[ $(arch) == "arm64" ]]; then
-        downloadURL="https://release.gitkraken.com/darwin-arm64/installGitKraken.dmg"
+        gitkrakenFeed="https://release.gitkraken.com/darwin-arm64/RELEASES?v=12.0.0&darwin=27.0.0"
     else
-        downloadURL="https://release.gitkraken.com/darwin/installGitKraken.dmg"
+        gitkrakenFeed="https://release.gitkraken.com/darwin/RELEASES?v=12.0.0&darwin=27.0.0"
     fi
-    appNewVersion=$(curl -sI "$downloadURL" | awk 'BEGIN{IGNORECASE=1}/^location:/{gsub("\r",""); print $2}' | tail -n 1 | sed -E 's#.*/darwin/(arm64|x64)/([0-9.]+)/.*#\2#')
+    gitkrakenJSON=$(curl -fsL "$gitkrakenFeed")
+    appNewVersion=$(getJSONValue "$gitkrakenJSON" "name")
+    downloadURL=$(getJSONValue "$gitkrakenJSON" "url")
     expectedTeamID="T7QVVUTZQ8"
     ;;
 glean)
     name="Glean"
-    type="dmg"
-    appNewVersion=$(curl -sL "https://storage.googleapis.com/glean-downloads/glean-desktop-app/latest-mac.yml" | grep "^version:" | sed 's/^version:[[:space:]]*\([0-9.]*\).*/\1/')
-    downloadURL="https://storage.googleapis.com/glean-downloads/glean-desktop-app/Glean-${appNewVersion}-universal.dmg"
+    type="pkg"
+    appNewVersion=$(curl -fsL "https://storage.googleapis.com/glean-downloads/glean-desktop-app/latest-mac.yml" | awk -F': ' '/^version:/{print $2; exit}')
+    downloadURL="https://storage.googleapis.com/glean-downloads/glean-desktop-app/Glean-${appNewVersion}-universal.pkg"
     expectedTeamID="877XN49FUQ"
     ;;
 globalprotect62)
@@ -6224,6 +6264,13 @@ googlechrome)
     appNewVersion=$(curl -s "https://versionhistory.googleapis.com/v1/chrome/platforms/mac/channels/stable/versions/all/releases?filter=fraction%3E0.01,endtime=none&order_by=version%20desc" | grep "chrome/platforms/mac/channels/stable" | grep -m1 -oE 'versions/[^/]+/releases' | cut -d'/' -f2)
     expectedTeamID="EQHXZ8M8AV"
     printlog "WARNING for ERROR: Label googlechrome should not be used. Instead use googlechromepkg as per recommendations from Google. It's not fully certain that the app actually gets updated here. googlechromepkg will have built in updates and make sure the client is updated in the future." REQ
+    ;;
+googlechromecanary)
+    name="Google Chrome Canary"
+    type="dmg"
+    downloadURL="https://dl.google.com/chrome/mac/universal/canary/googlechromecanary.dmg"
+    appNewVersion=$(getJSONValue "$(curl -fsL "https://versionhistory.googleapis.com/v1/chrome/platforms/mac/channels/canary/versions/all/releases?filter=endtime=none&order_by=version%20desc" )" "releases[0].version" )
+    expectedTeamID="EQHXZ8M8AV"
     ;;
 googlechromeenterprise)
     name="Google Chrome"
@@ -6465,6 +6512,13 @@ gyazogif)
     downloadURL="https://files.gyazo.com/setup/Gyazo-${appNewVersion}.dmg"
     expectedTeamID="9647Y3B7A4"
     ;;
+hammerspoon)
+    name="Hammerspoon"
+    type="zip"
+    downloadURL=$(downloadURLFromGit "Hammerspoon" "hammerspoon")
+    appNewVersion=$(versionFromGit "Hammerspoon" "hammerspoon")
+    expectedTeamID="VQCYSNZB89"
+    ;;
 hancock)
     # Credit: Bilal Habib @Pro4TLZZZ
     name="Hancock"
@@ -6603,9 +6657,14 @@ houdahspot)
 hpclick)
     name="HP Click"
     type="dmg"
-    hpClickData=$(curl -fsS -X POST "https://support.hp.com/wcc-services/swd-v2/driverDetails?authState=anonymous&template=SWDSeriesDownload" -H "Accept: application/json, text/plain, */*" -H "Content-Type: application/json" -H "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36" -H "Origin: https://support.hp.com" -H "Referer: https://support.hp.com/us-en/drivers/hp-click-printing-software/15550865" -d '{"productLineCode":"GE","lc":"en","cc":"us","osTMSId":"18015185915131310124113888731054140111953115","osName":"Mac OS","productNumberOid":21355055,"productSeriesOid":15550865,"platformId":"275027708611380099388405694207665"}')
-    downloadURL=$(getJSONValue "$hpClickData" 'data.softwareTypes[0].softwareDriversList[0].latestVersionDriver.fileUrl')
-    appNewVersion=$(getJSONValue "$hpClickData" 'data.softwareTypes[0].softwareDriversList[0].latestVersionDriver.version')
+    hpPlatformId="275027708611380099388405694207665"
+    hpOSData=$(curl -fsS "https://support.hp.com/wcc-services/swd-v2/osVersionData?cc=us&lc=en&productOid=15550865&authState=anonymous&template=SWDSeriesDownload" -H "Accept: application/json, text/plain, */*" -H "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36" -H "Referer: https://support.hp.com/us-en/drivers/hp-click-printing-software/15550865") || cleanupAndExit 14 "Could not retrieve HP Click macOS platform data." ERROR
+    hpOSTMSId=$(getJSONValue "$hpOSData" "data.osAvailablePlatformsAnsOS.osPlatforms.find(p => p.id === \"$hpPlatformId\").osVersions.sort((a, b) => a.order - b.order)[0].id")
+    hpClickData=$(curl -fsS -X POST "https://support.hp.com/wcc-services/swd-v2/driverDetails?authState=anonymous&template=SWDSeriesDownload" -H "Accept: application/json, text/plain, */*" -H "Content-Type: application/json" -H "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36" -H "Origin: https://support.hp.com" -H "Referer: https://support.hp.com/us-en/drivers/hp-click-printing-software/15550865" -d "{\"productLineCode\":\"GE\",\"lc\":\"en\",\"cc\":\"us\",\"osTMSId\":\"$hpOSTMSId\",\"osName\":\"Mac OS\",\"productNumberOid\":21355055,\"productSeriesOid\":15550865,\"platformId\":\"$hpPlatformId\"}") || cleanupAndExit 14 "Could not retrieve HP Click driver details." ERROR
+    hpClickDriver=$(getJSONValue "$hpClickData" 'data.softwareTypes.flatMap(type => type.softwareDriversList).map(driver => driver.latestVersionDriver).find(driver => driver.title === "HP Click")')
+    downloadURL=$(getJSONValue "$hpClickDriver" "fileUrl")
+    appNewVersion=$(getJSONValue "$hpClickDriver" "version")
+    [[ -n "$downloadURL" && -n "$appNewVersion" ]] || cleanupAndExit 14 "Could not determine the HP Click download URL or version." ERROR
     expectedTeamID="6HB5Y2QTA3"
     ;;
 hpeasyadmin)
@@ -6788,6 +6847,13 @@ imazingprofileeditor)
     downloadURL="https://downloads.imazing.com/mac/iMazing-Profile-Editor/iMazingProfileEditorMac.dmg"
     appNewVersion=$(curl -s https://imazing.com/profile-editor/download | grep -2 'Version' | head -4 | sed -nE 's/.*<b>([0-9\.]+)<\/b>.*/\1/p' )
     expectedTeamID="J5PR93692Y"
+    ;;
+incidentio)
+    name="incident.io"
+    type="zip"
+    appNewVersion=$(curl -fsL "https://storage.googleapis.com/incident-io-production-downloads/appcast.xml" | grep -Eo 'shortVersionString(="|>)[0-9.]+' | grep -Eo '[0-9.]+$' | sort -V | tail -1)
+    downloadURL="https://storage.googleapis.com/incident-io-production-downloads/incident.io-${appNewVersion}.zip"
+    expectedTeamID="2B35RJ426W"
     ;;
 inetclearreportsdesigner)
     name="i-Net Clear Reports Designer"
@@ -6991,13 +7057,17 @@ isadora)
     URLversion="$( echo "$downloadURL" | cut -d '-' -f 2 | cut -d 'f' -f 1 )"
     appNewVersion="${URLversion[1]}.${URLversion[2]}.${URLversion[3]}"
     ;;
-island)
-    name="Island"
-    type="dmg"
-    downloadURL="https://d3qqq7lqx3rf23.internal.island.io/E5QCaudFDx5FE5OX4INk/stable/latest/mac/IslandX64.dmg"
-    appCustomVersion() { echo "$(defaults read /Applications/Island.app/Contents/Info.plist CFBundleShortVersionString | sed 's/[^.]*.//' | sed -e 's/*\.//')" }
-    appNewVersion=$(curl -fsLIXGET "https://d3qqq7lqx3rf23.internal.island.io/E5QCaudFDx5FE5OX4INk/stable/latest/mac/IslandX64.dmg" | grep -i "^x-amz-meta-version" | sed -e 's/x-amz-meta-version\: //' | tr -d '\r')
-    expectedTeamID="38ZC4T8AWY"
+isixdicomviewer)
+    name="IsiX DICOM Viewer"
+    type="zip"
+    appNewVersion="$(versionFromGit ThalesMMS IsiX-DICOM-Viewer-macOS)"
+    if [[ $(arch) == "arm64" ]]; then
+        archiveName="IsiX-DICOM-Viewer-${appNewVersion}-Apple-Silicon-Macs.zip"
+    elif [[ $(arch) == "i386" ]]; then
+        archiveName="IsiX-DICOM-Viewer-${appNewVersion}-Intel-Macs.zip"
+    fi
+    downloadURL="$(downloadURLFromGit ThalesMMS IsiX-DICOM-Viewer-macOS)"
+    expectedTeamID="H4Q6WN7NV5"
     ;;
 istatmenus)
     name="iStat Menus"
@@ -7014,6 +7084,13 @@ iterm2)
     appNewVersion=$(curl -is https://iterm2.com/downloads/stable/latest | grep location: | grep -o "iTerm2.*zip" | cut -d "-" -f 2 | cut -d '.' -f1 | sed 's/_/./g')
     expectedTeamID="H7V7XYVQ7D"
     blockingProcesses=( "iTerm" "iTerm2" )
+    ;;
+itspaint)
+    name="ItsPaint"
+    type="dmg"
+    downloadURL="$(downloadURLFromGit joshlin2201 itspaint)"
+    appNewVersion="$(versionFromGit joshlin2201 itspaint)"
+    expectedTeamID="H87MY889P5"
     ;;
 itsycal|\
 mowgliiitsycal)
@@ -7130,11 +7207,10 @@ jamfpssoutility)
     expectedTeamID="483DWKW443"
     ;;
 jamfreenroller)
-    # credit: Mischa van der Bent
     name="ReEnroller"
     type="zip"
     downloadURL=$(downloadURLFromGit jamf ReEnroller)
-    #appNewVersion=$(versionFromGit jamf ReEnroller)
+    appNewVersion=$(versionFromGit jamf ReEnroller)
     expectedTeamID="PS2F6S478M"
     ;;
 jamfsetupchecklist)
@@ -7163,14 +7239,15 @@ jamie)
 jamovi)
     name="jamovi"
     type="dmg"
-    if [[ "$arch" == "arm64" ]]; then
+    if [[ $(arch) == "arm64" ]]; then
         archSuffix="arm64"
     else
         archSuffix="x64"
     fi
-    downloadFile=$(curl -fsL "https://dl.jamovi.org/" | grep -o "jamovi-[0-9][^\"]*-macos-${archSuffix}\.dmg" | sort -Vu | tail -n 1)
-    downloadURL="https://dl.jamovi.org/${downloadFile}"
-    appNewVersion="$(echo "$downloadFile" | sed -E "s/^jamovi-([0-9.]+)-macos-${archSuffix}\.dmg$/\1/")"
+    downloadFile=$(curl -fsSL -e "https://www.jamovi.org/" "https://www.jamovi.org/download.html" | grep -o "jamovi-[0-9][^\"]*-macos-${archSuffix}\.dmg" | sort -Vu | tail -n 1)
+    downloadURL="https://www.jamovi.org/downloads/$downloadFile"
+    appNewVersion=$(echo "$downloadFile" | sed -nE "s/^jamovi-([0-9.]+)-macos-${archSuffix}\.dmg$/\1/p")
+    curlOptions=( -e "https://www.jamovi.org/download.html" )
     expectedTeamID="9NCBP559AB"
     ;;
 jasp)
@@ -7599,6 +7676,13 @@ kicad)
     versionKey="CFBundleShortVersionString"
     expectedTeamID="9FQDHNY6U2"
     blockingProcesses=("gerbview" "bitmap2component" "kicad" "pl_editor" "pcb_calculator" "pcbnew" "eeschema")
+    ;;
+kilobat)
+    name="Kilobat"
+    type="dmg"
+    downloadURL=$(downloadURLFromGit seifip kilobat-releases)
+    appNewVersion=$(versionFromGit seifip kilobat-releases)
+    expectedTeamID="HAR874R67J"
     ;;
 kimplusclientmodul)
     name="KIMplus Clientmodul"
@@ -8211,8 +8295,8 @@ macadminspython)
     name="MacAdmins Python"
     type="pkg"
     packageID="io.macadmins.python.recommended"
-    downloadURL=$(curl --silent --fail "https://api.github.com/repos/macadmins/python/releases/latest" | awk -F '"' "/browser_download_url/ && /python_recommended_signed/ { print \$4; exit }")
-    appNewVersion=$(grep -o -E '\d+\.\d+\.\d+\.\d+' <<< $downloadURL | head -n 1)
+    downloadURL=$(downloadURLFromGit macadmins python)
+    appNewVersion=$(versionFromGit macadmins python)
     expectedTeamID="T4SK8ZXCXG"
     blockingProcesses=( NONE )
     ;;
@@ -8266,32 +8350,16 @@ macpass)
 macports)
     name="MacPorts"
     type="pkg"
-    #buildVersion=$(uname -r | cut -d '.' -f 1)
-    case $(uname -r | cut -d '.' -f 1) in
-        25)
-            archiveName="Tahoe.pkg"
-            ;;
-	    24)
-	        archiveName="Sequoia.pkg"
-	        ;;
-        23)
-            archiveName="Sonoma.pkg"
-            ;;
-        22)
-            archiveName="Ventura.pkg"
-            ;;
-        21)
-            archiveName="Monterey.pkg"
-            ;;
-        20)
-            archiveName="BigSur.pkg"
-            ;;
-        19)
-            archiveName="Catalina.pkg"
-            ;;
-        *)
-            cleanupAndExit 98 "Mac Ports label does not support this version of darwin."
-            ;;
+    case "$installedOSversion" in
+        27.*) archiveName="GoldenGate.pkg" ;;
+        26.*) archiveName="Tahoe.pkg" ;;
+        15.*) archiveName="Sequoia.pkg" ;;
+        14.*) archiveName="Sonoma.pkg" ;;
+        13.*) archiveName="Ventura.pkg" ;;
+        12.*) archiveName="Monterey.pkg" ;;
+        11.*) archiveName="BigSur.pkg" ;;
+        10.15.*) archiveName="Catalina.pkg" ;;
+        *) cleanupAndExit 98 "MacPorts does not support macOS $installedOSversion." ERROR ;;
     esac
     downloadURL=$(downloadURLFromGit macports macports-base)
     appNewVersion=$(versionFromGit macports macports-base)
@@ -8299,6 +8367,22 @@ macports)
     updateTool="/opt/local/bin/port"
     updateToolArguments="selfupdate"
     expectedTeamID="QTA3A3B7F3"
+    blockingProcesses=( NONE )
+    ;;
+macsfancontrol)
+    name="Macs Fan Control"
+    type="zip"
+    downloadURL=$(downloadURLFromGit crystalidea macs-fan-control)
+    appNewVersion=$(versionFromGit crystalidea macs-fan-control)
+    expectedTeamID="ACC5R6RH47"
+    ;;
+macshot)
+    name="macshot"
+    type="dmg"
+    archiveName="MacShot.dmg[0-9.]*"
+    downloadURL="$(downloadURLFromGit sw33tLie macshot)"
+    appNewVersion="$(versionFromGit sw33tLie macshot)"
+    expectedTeamID="BR52ZWX528"
     ;;
 macshot)
     name="macshot"
@@ -8330,7 +8414,6 @@ mactex)
 mactracker)
     name="Mactracker"
     type="zip"
-    #downloadURL=$(curl -fs "https://mactracker.ca/releasenotes-mac.html" | grep "Mactracker_" | sed "s|.*href=\"\(.*\)\">Download for macOS.*|\\1|")
     downloadURL=$(curl -fs "https://update.mactracker.ca/appcast-b.xml" | xpath '//rss/channel/item[last()]/enclosure/@url' 2>/dev/null | cut -d '"' -f 2)
     appNewVersion=$(curl -fs "https://update.mactracker.ca/appcast-b.xml" | xpath '//rss/channel/item[last()]/enclosure/@sparkle:version' 2>/dev/null | cut -d '"' -f 2)
     expectedTeamID="63TP32R3AB"
@@ -8646,6 +8729,19 @@ microsoftdefenderatp)
     fi
     updateTool="/Library/Application Support/Microsoft/MAU2.0/Microsoft AutoUpdate.app/Contents/MacOS/msupdate"
     updateToolArguments=( --install --apps WDAV00 )
+    ;;
+microsoftdotnetsdk10)
+    name="Microsoft .NET SDK 10"
+    type="pkg"
+    appNewVersion=$(curl -fsL "https://builds.dotnet.microsoft.com/dotnet/Sdk/10.0/latest.version")
+    if [[ $(arch) == "arm64" ]]; then
+        downloadURL="https://builds.dotnet.microsoft.com/dotnet/Sdk/${appNewVersion}/dotnet-sdk-${appNewVersion}-osx-arm64.pkg"
+    else
+        downloadURL="https://builds.dotnet.microsoft.com/dotnet/Sdk/${appNewVersion}/dotnet-sdk-${appNewVersion}-osx-x64.pkg"
+    fi
+    appCustomVersion(){ ls /usr/local/share/dotnet/sdk 2>/dev/null | grep -E '^10\.0\.[0-9]+$' | sort -V | tail -1 }
+    expectedTeamID="UBF8T346G9"
+    blockingProcesses=( NONE )
     ;;
 microsoftedge|\
 microsoftedgeconsumerstable|\
@@ -9579,10 +9675,11 @@ nexusshell)
 nodejs)
     name="nodejs"
     type="pkg"
-    appNewVersion=$(curl -s -L https://nodejs.org/dist/latest/ | sed -nE 's|.*>node-(.*)\.pkg</a>.*|\1|p')
-    appCustomVersion(){/usr/local/bin/node -v}
-    downloadURL="https://nodejs.org/dist/latest/node-$(curl -s -L https://nodejs.org/dist/latest/ | sed -nE 's|.*>node-(.*)\.pkg</a>.*|\1|p').pkg"
+    packageID="org.nodejs.node.pkg"
+    appNewVersion=$(getJSONValue "$(curl -fsL https://nodejs.org/dist/index.json)" "[0].version")
+    downloadURL="https://nodejs.org/dist/${appNewVersion}/node-${appNewVersion}.pkg"
     expectedTeamID="HX7739G8FX"
+    blockingProcesses=( NONE )
     ;;
 nodejslts)
     name="nodejs"
@@ -9605,14 +9702,6 @@ nomad)
     type="pkg"
     downloadURL="https://files.jamfconnect.com/NoMAD.pkg"
     expectedTeamID="VRPY9KHGX6"
-    ;;
-nomadlogin)
-    # credit: Søren Theilgaard (@theilgaard)
-    name="NoMAD Login"
-    type="pkg"
-    downloadURL="https://files.nomad.menu/NoMAD-Login-AD.pkg"
-    appNewVersion=$(curl -fs https://nomad.menu/support/ | grep "NoMAD Login AD Downloads" | sed -E 's/.*Current Version ([0-9\.]*)<.*/\1/g')
-    expectedTeamID="AAPZK3CB24"
     ;;
 nordlayer)
     # credit: Taboc741 (https://github.com/taboc741)
@@ -9655,19 +9744,12 @@ nova)
     appNewVersion="$(curl -fsIL https://download.panic.com/nova/Nova-Latest.zip | grep -i ^location | tail -1 | sed -E 's/^.*http.*\%20([0-9.]*)\.zip/\1/g')"
     expectedTeamID="VE8FC488U5"
     ;;
-nps-santa)
-    name="Santa"
-    type="pkg"
-    packageID="com.northpolesec.santa"
-    downloadURL=$(downloadURLFromGit northpolesec santa)
-    appNewVersion=$(versionFromGit northpolesec santa)
-    expectedTeamID="ZMCG7MLDV9"
-    ;;
+npssanta|\
+nps-santa|\
 npssantafull)
     name="Santa"
     type="pkg"
     packageID="com.northpolesec.santa"
-    archiveName="[0-9]\\.pkg"
     downloadURL=$(downloadURLFromGit northpolesec santa)
     appNewVersion=$(versionFromGit northpolesec santa)
     expectedTeamID="ZMCG7MLDV9"
@@ -9817,6 +9899,17 @@ omnifocus4)
     downloadURL=$(curl -fs "https://update.omnigroup.com/appcast/com.omnigroup.OmniFocus4" | xpath '(//rss/channel/item/enclosure/@url)[1]' 2>/dev/null | head -1 | cut -d '"' -f 2)
     appNewVersion=$( echo "${downloadURL}" | sed -E 's/.*\/[a-zA-Z]*-([0-9.]*)\..*/\1/g' )
     expectedTeamID="34YW5XSRB7"
+    ;;
+omnigent)
+    name="Omnigent"
+    type="dmg"
+    if [[ "$(arch)" == "arm64" ]]; then
+        downloadURL="https://omnigent.ai/download/mac"
+    else
+        downloadURL="https://omnigent.ai/download/mac-x64"
+    fi
+    appNewVersion=$(curl -fsLI -w "%{url_effective}" -o /dev/null "$downloadURL" | sed -E 's#.*Omnigent-([0-9.]+)-(arm64|x64)\.dmg#\1#')
+    expectedTeamID="8RMX4WU6F8"
     ;;
 omnigraffle6)
     name="OmniGraffle"
@@ -10018,6 +10111,14 @@ opera)
     versionKey="CFBundleVersion"
     expectedTeamID="A2P9LX4JPN"
     ;;
+operagx)
+    name="Opera GX"
+    type="dmg"
+    appNewVersion=$(curl -fsL "https://get.geo.opera.com/pub/opera_gx/" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+' | sort -V | tail -1)
+    downloadURL="https://get.geo.opera.com/pub/opera_gx/${appNewVersion}/mac/Opera_GX_${appNewVersion}_Setup.dmg"
+    versionKey="CFBundleVersion"
+    expectedTeamID="A2P9LX4JPN"
+    ;;
 orbstack)
     name="OrbStack"
     type="dmg"
@@ -10105,8 +10206,14 @@ outputarcade)
 outputhub)
     name="Output Hub"
     type="dmg"
-    downloadURL="$(curl -fsL "https://output.com/hub"| grep "Mac Download" | cut -d\" -f4)"
-    appNewVersion=$( curl -fsL "https://output-hub-builds.s3.amazonaws.com/latest-mac.yml" | grep "^version:" | cut -d" " -f2 )
+    ymlContent=$(curl -fsL "https://release-builds.outputaudio.com/output-hub/latest-mac.yml" | tr -d '\r')
+    dmgName=$(echo "$ymlContent" | sed -n 's/^[[:space:]]*-[[:space:]]*url:[[:space:]]*\(.*\.dmg\)[[:space:]]*$/\1/p' | head -n 1)
+    if [[ $dmgName =~ -([0-9.]+)-mac ]]; then
+        appNewVersion=$match[1]
+    fi
+    dmgNameEncoded=${dmgName// /%20}
+    downloadURL="https://release-builds.outputaudio.com/output-hub/${dmgNameEncoded}"
+    versionKey="CFBundleVersion"
     expectedTeamID="M4BQRFQ23V"
     ;;
 outset)
@@ -10117,6 +10224,21 @@ outset)
     appNewVersion=$(versionFromGit "macadmins" "outset")
     expectedTeamID="T4SK8ZXCXG"
     blockingProcesses=( NONE )
+    ;;
+outsystemsservicestudio)
+    name="ServiceStudio"
+    type="dmg"
+    outsystemsModuleInfo=$(curl -fsL "https://www.outsystems.com/downloads/moduleservices/moduleinfo")
+    outsystemsModuleVersion=$(getJSONValue "$outsystemsModuleInfo" "manifest.versionToken")
+    outsystemsReleases=$(curl -fsL -X POST "https://www.outsystems.com/downloads/screenservices/Downloads/MainFlow/HomeScreen/DataActionGetReleases" -H "Content-Type: application/json; charset=UTF-8" -H "X-CSRFToken: T6C+9iB49TLra4jEsMeSckDMNhQ=" --data-raw "{\"versionInfo\":{\"moduleVersion\":\"${outsystemsModuleVersion}\",\"apiVersion\":\"_eDWRKCNrOtW1Vtab26MtA\"},\"viewName\":\"MainFlow.HomeScreen\",\"screenData\":{\"variables\":{}},\"clientVariables\":{\"IsMacUser\":true}}")
+    if [[ $(arch) == "arm64" ]]; then
+        outsystemsFilename=$(echo "$outsystemsReleases" | grep -o 'ServiceStudio-[0-9.]*_arm64\.dmg' | head -1)
+    else
+        outsystemsFilename=$(echo "$outsystemsReleases" | grep -o 'ServiceStudio-[0-9.]*\.dmg' | head -1)
+    fi
+    appNewVersion=$(echo "$outsystemsFilename" | sed -E 's/^ServiceStudio-([0-9.]+)(_arm64)?\.dmg$/\1/')
+    downloadURL="https://dxejw4oyledi.cloudfront.net/repository/servicestudio/${appNewVersion}/${outsystemsFilename}"
+    expectedTeamID="S25XN959HW"
     ;;
 overflow)
     name="Overflow"
@@ -10231,7 +10353,7 @@ patchomator)
 pcoipclient)
     name="PCoIPClient"
     type="dmg"
-    pcoipClientInfo=$(curl -fs "https://dl.anyware.hp.com/ztqM7i47Dt06ETYM/pcoip-client/raw/names/pcoip-client-info/versions/dmg/pcoip-client-dmg-info.json")
+    pcoipClientInfo=$(curl -fsL "https://dl.anyware.hp.com/ztqM7i47Dt06ETYM/pcoip-client/raw/names/pcoip-client-info/versions/dmg/pcoip-client-dmg-info.json")
     appNewVersion=$(getJSONValue "$pcoipClientInfo" "[0].currentVersion")
     downloadURL="https://dl.anyware.hp.com/pcoip-client/raw/names/pcoip-client-dmg/versions/${appNewVersion}/pcoip-client_${appNewVersion}.dmg"
     expectedTeamID="RU4LW7W32C"
@@ -10317,9 +10439,10 @@ pitch)
 plantronicshub)
     name="Plantronics Hub"
     type="pkgInDmg"
-    downloadURL="https://www.poly.com/content/dam/www/software/PlantronicsHubInstaller.dmg"
+    downloadURL="https://downloads.poly.com/headsets/PlantronicsHubInstaller.dmg"
     expectedTeamID="SKWK2Q7JJV"
-    appNewVersion=$(curl -fs "https://www.poly.com/in/en/support/knowledge-base/kb-article-page?lang=en_US&urlName=Hub-Release-Notes&type=Product_Information__kav" | grep -o "(*.*<span>)" | head -1 | cut -d "(" -f2 | sed 's/\<\/span\>//g' | cut -d "<" -f1)
+    # The Mac installer hasn't changed since 2022 and the release notes page is gone, so the version is fixed
+    appNewVersion="3.25.53799.37131"
     ;;
 platypus)
     name="Platypus"
@@ -10540,6 +10663,17 @@ processing4)
     appNewVersion=$(echo "$downloadURL" | sed -E 's#.*/processing-([0-9.]+)-macos-(aarch64|x64)\.dmg$#\1#')
     expectedTeamID="6297K33652"
     ;;
+proclaim)
+    name="Proclaim"
+    type="dmg"
+    appNewVersion=$(curl -fsSL "https://clientservices.logos.com/update/v1/feed/proclaim-mac/stable.xml" | xpath 'string((//*[local-name()="entry"])[1]/*[local-name()="version"])')
+    if [[ $(arch) == "arm64" ]]; then
+        downloadURL="https://downloads.logoscdn.com/Proclaim/Installer/${appNewVersion}/Proclaim-arm.dmg"
+    elif [[ $(arch) == "i386" ]]; then
+        downloadURL="https://downloads.logoscdn.com/Proclaim/Installer/${appNewVersion}/Proclaim.dmg"
+    fi
+    expectedTeamID="G2ET27DGDP"
+    ;;
 proctortrack)
     #credit: Jeff F. (@jefff on MacAdmins Slack)
     name="Proctortrack"
@@ -10581,6 +10715,23 @@ protondrive)
     type="dmg"
     appNewVersion=$(curl -fs "https://proton.me/download/drive/macos/appcast.xml" | xmllint --xpath "string(//item[*[local-name()='channel' and text()='stable']]/*[local-name()='shortVersionString'])" -)
     downloadURL="https://proton.me/download/drive/macos/$appNewVersion/ProtonDrive-$appNewVersion.dmg"
+    expectedTeamID="2SB5Z68H26"
+    ;;
+protonmail)
+    name="Proton Mail"
+    type="dmg"
+    protonMailData=$(curl -fsL 'https://proton.me/download/mail/macos/version.json')
+    protonMailReleaseCount=$(getJSONValue "$protonMailData" 'Releases.length')
+    for (( protonMailReleaseIndex=0; protonMailReleaseIndex<protonMailReleaseCount; protonMailReleaseIndex++ )); do
+        if [[ $(getJSONValue "$protonMailData" "Releases[$protonMailReleaseIndex].CategoryName") == "Stable" ]]; then
+            appNewVersion=$(getJSONValue "$protonMailData" "Releases[$protonMailReleaseIndex].Version")
+            downloadURL=$(getJSONValue "$protonMailData" "Releases[$protonMailReleaseIndex].File[0].Url")
+            break
+        fi
+    done
+    if [[ -z $appNewVersion || -z $downloadURL ]]; then
+        cleanupAndExit 2 "Unable to resolve the latest stable Proton Mail release." ERROR
+    fi
     expectedTeamID="2SB5Z68H26"
     ;;
 protonpass)
@@ -10797,6 +10948,15 @@ raycast)
     appNewVersion="$(curl -fsSIL -o /dev/null -w '%{url_effective}' "$downloadURL" | sed -nE 's|.*/Raycast_([0-9]+(\.[0-9]+)+)_[^/]+\.dmg$|\1|p')"
     expectedTeamID="SY64MV22J9"
     ;;
+realvncconnect|\
+realvncconnect8)
+    name="RealVNC Connect"
+    type="pkg"
+    downloadURL="https://downloads.realvnc.com/download/file/realvnc-connect/RealVNC-Connect-Latest-MacOSX-universal.pkg"
+    appNewVersion="$(curl -sfL "https://realvnc.zendesk.com/api/v2/help_center/en-us/sections/26441433034013/articles.json?per_page=100" | grep -oE '"title":"RealVNC Connect [0-9.]+' | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | sort -V | tail -1)"
+    expectedTeamID="ZNCQ8JEH7X"
+    blockingProcesses=( "rvncconnect" )
+    ;;
 realvncondemandassist)
     name="On-Demand-Assist-$(curl -sL "https://www.realvnc.help/" | awk -F'"' '/Mac/ && /\.zip/{print $2}' | sed -n 's:.*generic/\(.*\)/.*:\1:p')-MacOSX-universal"
     type="zip"
@@ -10823,6 +10983,19 @@ reaper)
     downloadURL="https://www.reaper.fm/files/7.x/reaper$(echo $appNewVersion | tr -d '.')_universal.dmg"
     appCustomVersion(){ /usr/bin/defaults read "/Applications/REAPER.app/Contents/Info.plist" CFBundleShortVersionString | cut -d'.' -f1-2 }
     expectedTeamID="Y3T58622SG"
+    ;;
+recordist)
+    name="Recordist"
+    type="dmg"
+    if [[ $(arch) == "arm64" ]]; then
+        downloadURL="https://recordist.app/get/mac/latest?from=mdm"
+        appNewVersion=$(getJSONValue "$(curl -fsL "https://recordist.app/get/mac/info")" "version")
+    else
+        printlog "Recordist requires a Mac with Apple silicon." ERROR
+        cleanupAndExit 95 "Recordist requires Apple silicon" ERROR
+    fi
+    blockingProcesses=( "recordist" )
+    expectedTeamID="JNC57WQK69"
     ;;
 rectangle)
     name="Rectangle"
@@ -10855,6 +11028,18 @@ redgiant)
     installerTool="Red Giant Installer.app"
     CLIInstaller="Red Giant Installer.app/Contents/MacOS/installbuilder.sh"
     CLIArguments=( --mode unattended --unattendedmodeui none )
+    ;;
+redisinsight)
+    name="Redis Insight"
+    type="dmg"
+    if [[ $(arch) == "arm64" ]]; then
+        archiveName="Redis-Insight-mac-arm64.dmg"
+    else
+        archiveName="Redis-Insight-mac-x64.dmg"
+    fi
+    downloadURL="$(downloadURLFromGit redis RedisInsight)"
+    appNewVersion="$(versionFromGit redis RedisInsight)"
+    expectedTeamID="UUK47G4BAZ"
     ;;
 redshift)
     name="redshift"
@@ -11390,14 +11575,31 @@ signiantapp)
     appNewVersion="$(echo $downloadURL | sed -E 's/.*Signiant_App_([0-9]+(\.[0-9]+)*)\.dmg/\1/')"
     expectedTeamID="U6ZZ4QLU4Q"
     ;;
-silentknight)
+silentknight|silentknight2)
     name="SilentKnight"
     type="zip"
-    folderName=$(curl -fs "https://eclecticlight.co/downloads/" | grep -o 'https://[^"]*silentknight[0-9]*.zip' | sort -V | tail -n 1 | sed 's|.*/\(silentknight[0-9]*\)\.zip|\1|')
+    downloadURL=$(curl -fsL "https://eclecticlight.co/downloads/" | grep -Eo 'https://eclecticlight\.co/wp-content/uploads/[0-9]{4}/[0-9]{2}/silentknight[0-9]+\.zip' | sort -V | tail -n 1)
+    folderName="${downloadURL##*/}"
+    folderName="${folderName%.zip}"
     appName="${folderName}/SilentKnight.app"
-    downloadURL="https://eclecticlight.co/wp-content/uploads/$(curl -fs "https://eclecticlight.co/downloads/" | grep -o '[0-9]\{4\}/[0-9]\{2\}/silentknight[0-9]*.zip' | sort -V | tail -n 1)"
-    appNewVersion="${folderName//[^0-9.]/}"
+    appNewVersion=$(echo "$downloadURL" | sed -E 's|.*/silentknight([0-9])([0-9]{2})\.zip|\1.\2|')
     expectedTeamID="QWY4LRW926"
+    ;;
+silentknight3)
+    name="SilentKnight 3"
+    type="zip"
+    if [[ $(arch) == "arm64" ]]; then
+        downloadURL=$(curl -fsL "https://eclecticlight.co/downloads/" | grep -Eo 'https://eclecticlight\.co/wp-content/uploads/[0-9]{4}/[0-9]{2}/sk[0-9]+\.zip' | sort -V | tail -n 1)
+        folderName="${downloadURL##*/}"
+        folderName="${folderName%.zip}"
+        appName="${folderName}/SilentKnight3.app"
+        appNewVersion=$(echo "$downloadURL" | sed -E 's|.*/sk([0-9])([0-9]{2})\.zip|\1.\2|')
+    else
+        printlog "SilentKnight 3 requires an Apple silicon Mac." ERROR
+        cleanupAndExit 95 "SilentKnight 3 requires Apple silicon" ERROR
+    fi
+    expectedTeamID="QWY4LRW926"
+    blockingProcesses=( "SilentKnight3" )
     ;;
 silnite)
     # credit: Søren Theilgaard (@theilgaard)
@@ -11515,11 +11717,12 @@ smartgit)
     name="SmartGit"
     type="dmg"
     if [[ $(arch) == "arm64" ]]; then
-    downloadURL="https://www.syntevo.com$(curl -fs "https://www.syntevo.com/smartgit/download/" | grep -i -o -E "/downloads/.*/smartgit.*\.dmg" | tail -1)"
-    elif [[ $(arch) == "i386" ]]; then
-    downloadURL="https://www.syntevo.com$(curl -fs "https://www.syntevo.com/smartgit/download/" | grep -i -o -E "/downloads/.*/smartgit.*\.dmg" | head -1)"
+        smartgitArch="arm64"
+    else
+        smartgitArch="x86_64"
     fi
-    appNewVersion="$(curl -fs "https://www.syntevo.com/smartgit/changelog.txt" | grep -i -E "SmartGit *[0-9.]* *.*" | head -1 | awk '{print $2}')"
+    downloadURL=$(curl -fs "https://www.smartgit.dev/download/" | grep -o -E "https://download\.smartgit\.dev/smartgit/smartgit-[0-9_]+-macos-${smartgitArch}\.dmg" | sort -V | tail -1)
+    appNewVersion=$(echo "$downloadURL" | sed -E 's/.*smartgit-([0-9_]+)-macos.*/\1/; s/_/./g')
     expectedTeamID="PHMY45PTNW"
     ;;
 smartsheet)
@@ -12029,6 +12232,17 @@ suitestudio)
     fi
     expectedTeamID="58KZ58VMJ8"
     ;;
+sunsama)
+    name="Sunsama"
+    type="dmg"
+    if [[ $(arch) == "arm64" ]]; then
+        downloadURL="https://desktop.sunsama.com/mac/dmg/arm64"
+    elif [[ $(arch) == "i386" ]]; then
+        downloadURL="https://desktop.sunsama.com/mac/dmg/x64"
+    fi
+    appNewVersion=$(curl -sfIL "$downloadURL" | grep -i '^content-disposition:' | sed -E 's/.*Sunsama ([0-9.]+).*/\1/' | head -n 1)
+    expectedTeamID="SDWNXU94HZ"
+    ;;
 supercollider)
 	# A platform for audio synthesis and algorithmic composition, featuring real-time audio servers, an interpreted programming language, and an integrated development environment
     name="SuperCollider"
@@ -12385,13 +12599,6 @@ techsmithaudiate)
 	appName="Audiate.app"
 	expectedTeamID="7TQL462TU8"
 	;;
-techsmithcapture)
-    # credit Elena Ackley (@elenaelago)
-    name="TechSmith Capture"
-    type="dmg"
-    downloadURL="https://cdn.cloud.techsmith.com/techsmithcapture/mac/TechSmithCapture.dmg"
-    expectedTeamID="7TQL462TU8"
-    ;;
 teladocproviderinstaller)
     name="TeladocProviderInstaller"
     type="pkg"
@@ -13125,19 +13332,6 @@ vernierspectralanalysis)
     expectedTeamID="75WN2B2WR8"
     ;;
 
-vfx)
-    name="VFX Suite"
-    type="zip"
-    appCustomVersion(){
-      ls "/Users/Shared/Red Giant/uninstall" | grep vfx | grep -Eo "202[0-9]+\.[0-9]+\.[0-9]+" | head -n 30 | sort -gru
-    }
-    appNewVersion="$(curl -H "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.1 Safari/605.1.15" -fs "https://support.maxon.net/hc/en-us/sections/4406405445394-VFX-Suite" | grep "#icon-star" -B3 | grep -Eo "202[0-9]+\.[0-9]+\.[0-9]+" | head -n 30 | sort -gru)"
-    downloadURL="https://mx-app-blob-prod.maxon.net/mx-package-production/installer/macos/redgiant/vfx/releases/${appNewVersion}/VfxSuite-${appNewVersion}_Mac.zip"
-    installerTool="VFX Suite Installer.app"
-    CLIInstaller="VFX Suite Installer.app/Contents/Scripts/install.sh"
-    CLIArguments=()
-    expectedTeamID="4ZY22YGXQG"
-    ;;
 viennaassistant)
     name="Vienna Assistant"
     type="pkgInZip"
@@ -13860,16 +14054,14 @@ zoom)
 zoomclient)
     name="zoom.us"
     type="pkg"
-    packageID="us.zoom.pkg.videomeeting"
     if [[ $(arch) == i386 ]]; then
        downloadURL="https://zoom.us/client/latest/Zoom.pkg"
     elif [[ $(arch) == arm64 ]]; then
        downloadURL="https://zoom.us/client/latest/Zoom.pkg?archType=arm64"
     fi
     expectedTeamID="BJ4HAAB9B3"
-    #appNewVersion=$(curl -is "https://beta2.communitypatch.com/jamf/v1/ba1efae22ae74a9eb4e915c31fef5dd2/patch/zoom.us" | grep currentVersion | tr ',' '\n' | grep currentVersion | cut -d '"' -f 4) # Does not match packageID
-    blockingProcesses=( zoom.us )
-    #blockingProcessesMaxCPU="5"
+    appNewVersion=$(curl -fsIL "$downloadURL" | cut -d "/" -f5)
+    versionKey="CFBundleVersion"
     ;;
 zoomgov)
     name="zoom.us"

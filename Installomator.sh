@@ -363,7 +363,7 @@ if [[ $(/usr/bin/arch) == "arm64" ]]; then
     fi
 fi
 VERSION="10.10.2"
-VERSIONDATE="2026-11-10"
+VERSIONDATE="2026-11-12"
 
 # MARK: Functions
 
@@ -8172,8 +8172,8 @@ ltspice)
 lucidlink)
     name="Lucid"
     type="pkg"
-    downloadURL="https://www.lucidlink.com/download/latest/osx/stable"
-    appNewVersion=$(curl -fsIL -H "Referer: https://www.lucidlink.com/download/latest/osx/stable" "$downloadURL" | awk 'BEGIN{IGNORECASE=1}/^location:/{gsub("\r",""); print $2}' | tail -n 1 | sed -E 's|.*/lucid-([0-9]+(\.[0-9]+)+)\.pkg$|\1|')
+    downloadURL="https://www.lucidlink.com/download/new-ll-latest/macos/stable"
+    appNewVersion=$(curl -fsIL -H "Referer: https://www.lucidlink.com/download/new-ll-latest/macos/stable" "$downloadURL" | awk 'BEGIN{IGNORECASE=1}/^location:/{gsub("\r",""); print $2}' | tail -n 1 | sed -E 's|.*/lucidlink-([0-9]+(\.[0-9]+)+)\.pkg$|\1|')
     expectedTeamID="Y4KMJPU2B4"
     ;;
 lucifer)

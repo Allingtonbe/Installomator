@@ -129,6 +129,7 @@ bbeditpkg
 beamstudio
 beekeeperstudio
 beeperdesktop
+beidtoken
 betterdisplay
 bettershot
 bettertouchtool

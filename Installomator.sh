@@ -363,7 +363,7 @@ if [[ $(/usr/bin/arch) == "arm64" ]]; then
     fi
 fi
 VERSION="10.10"
-VERSIONDATE="2026-11-12"
+VERSIONDATE="2026-11-17"
 
 # MARK: Functions
 
@@ -2865,6 +2865,13 @@ beeperdesktop)
     fi
     appNewVersion=$(curl -fsIL "${downloadURL}" | grep -i "^location" | grep -Eo '[0-9]+(\.[0-9]+)+' | tail -1)
     expectedTeamID="PZYM8XX95Q"
+    ;;
+beidtoken)
+    name="BEIDToken"
+    type="pkgInDmg"
+    downloadURL="$(curl -fsL https://eid.belgium.be/en/download/16/license | grep -o 'https:\/\/eid\.belgium\.be\/sites\/default\/files\/software\/eID-Quickinstaller-[0-9/.]*dmg')"
+    appNewVersion="$(echo $downloadURL | grep -o '[0-9/.]*dmg' | sed 's/....$//')"
+    expectedTeamID="EU27N85PBZ"
     ;;
 betterdisplay)
     name="BetterDisplay"
@@ -8333,14 +8340,6 @@ macshot)
     downloadURL="$(downloadURLFromGit sw33tLie macshot)"
     appNewVersion="$(versionFromGit sw33tLie macshot)"
     expectedTeamID="J4XGH8RFS8"
-    ;;
-macshot)
-    name="macshot"
-    type="dmg"
-    archiveName="MacShot.dmg[0-9.]*"
-    downloadURL="$(downloadURLFromGit sw33tLie macshot)"
-    appNewVersion="$(versionFromGit sw33tLie macshot)"
-    expectedTeamID="BR52ZWX528"
     ;;
 mactexbasic|\
 basictex)

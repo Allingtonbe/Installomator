@@ -144,6 +144,14 @@ assemble.sh --labels ../my_labels/test --labels ../my_labels/production
 
 In this case the labels from `../my_labels/test` will be inserted first, then the labels from `../my_labels/production`  and then the labels from `fragments/labels`
 
+### Selecting labels from a list
+
+```
+assemble.sh --label-list path/to/labels.txt
+```
+
+The optional `--label-list` argument filters the label files included from the configured label directories. Put one label name per line, without the `.sh` extension. Blank lines and lines beginning with `#` are ignored. If `--label-list` is omitted, all label files are included.
+
 ### Building for Release
 
 ```

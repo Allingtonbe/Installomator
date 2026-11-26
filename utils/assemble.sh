@@ -13,10 +13,10 @@ dev_keychain_label="notary-scriptingosx"
 
 # parse arguments
 
-zparseopts -D -E -a opts r -run s -script p -pkg n -notarize h -help -labels+:=label_args l+:=label_args
+zparseopts -D -E -a opts r -run s -script p -pkg n -notarize h -help -labels+:=label_args l+:=label_args -label-list+:=label_list_args
 
 if (( ${opts[(I)(-h|--help)]} )); then
-  echo "usage: assemble.sh [--script|--pkg|--notarize] [-labels path/to/labels ...] [arguments...]"
+  echo "usage: assemble.sh [--script|--pkg|--notarize] [-labels path/to/labels ...] [--label-list path/to/labels.txt] [arguments...]"
   echo
   echo "builds and runs the installomator script from the fragements."
   echo "additional arguments are passed into the Installomator script for testing."
@@ -55,6 +55,13 @@ label_flags=( -l --labels )
 # array subtraction to remove options text
 label_paths=(${label_args:|label_flags})
 
+label_list_flags=( --label-list )
+label_list_paths=(${label_list_args:|label_list_flags})
+if (( ${#label_list_paths} > 1 )); then
+    echo "# provide only one --label-list file"
+    exit 1
+fi
+
 #setup some folders
 script_dir=$(dirname ${0:A})
 repo_dir=$(dirname $script_dir)
@@ -62,6 +69,7 @@ build_dir="$repo_dir/build"
 destination_file="$build_dir/Installomator.sh"
 fragments_dir="$repo_dir/fragments"
 labels_dir="$fragments_dir/labels"
+label_list="${label_list_paths[1]}"
 
 # add default labels_dir to label_paths
 label_paths+=$labels_dir
@@ -81,6 +89,35 @@ done
 if [[ ! -d $labels_dir ]]; then
     echo "# $labels_dir not found!"
     exit 1
+fi
+
+label_names=()
+if [[ -n "$label_list" ]]; then
+    if [[ ! -r "$label_list" ]]; then
+        echo "# $label_list not found or not readable!"
+        exit 1
+    fi
+
+    while IFS= read -r label || [[ -n "$label" ]]; do
+        label=${label%$'\r'}
+        if [[ -z "$label" || "$label" == \#* ]]; then
+            continue
+        fi
+        label_names+=("$label")
+    done < "$label_list"
+
+    for label in "${label_names[@]}"; do
+        label_found=0
+        for lpath in $label_paths; do
+            if [[ -f "$lpath/$label.sh" ]]; then
+                label_found=1
+                break
+            fi
+        done
+        if [[ $label_found -eq 0 ]]; then
+            echo "# warning: label $label from $label_list not found in configured label directories; skipping"
+        fi
+    done
 fi
 
 # create $build_dir when necessary
@@ -105,7 +142,16 @@ cat "$fragments_dir/arguments.sh" >> $destination_file
 # all the labels
 for lpath in $label_paths; do
     if [[ -d $lpath ]]; then
-        cat "$lpath"/*.sh >> $destination_file
+        if [[ -n "$label_list" ]]; then
+            for label in "${label_names[@]}"; do
+                label_file="$lpath/$label.sh"
+                if [[ -f "$label_file" ]]; then
+                    cat "$label_file" >> "$destination_file"
+                fi
+            done
+        else
+            cat "$lpath"/*.sh >> "$destination_file"
+        fi
     else
         echo "# $lpath not a directory, skipping..."
     fi

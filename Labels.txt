@@ -4,6 +4,7 @@
 4kvideodownloader
 4kvideodownloaderplus
 8x8
+aapconfigurationhelper
 abetterfinderattributes7
 abetterfinderrename11
 abetterfinderrename12
@@ -25,6 +26,7 @@ adobedigitaleditions
 adobereaderdc
 adobereaderdc-install
 adobereaderdc-update
+aegisub
 affinityapp
 affinitydesigner2
 affinityphoto2
@@ -271,6 +273,7 @@ codemeter
 coderunner
 codex
 colourcontrastanalyser
+comfyui
 conductor
 connectfonts
 container
@@ -333,6 +336,7 @@ diskspace
 displaylinkmanager
 docker
 dockersbx
+dockside
 dockutil
 doctolib
 domzilla-caffeine
@@ -453,6 +457,7 @@ freeplane
 front
 fsmonitor
 fujifilmwebcam
+fxfactory
 garminaviationdatabasemanager
 garminbasecamp
 garminexpress
@@ -542,6 +547,7 @@ i1profiler
 ibarcoder
 ibmaspera
 ibmasperaconnect
+ibmdatashift
 ibmnotifier
 ice
 icons
@@ -717,6 +723,7 @@ mactracker
 macusb
 macvector
 magicbullet
+magictoolbox
 magnolia
 mailmate
 mailtooutlook
@@ -734,6 +741,7 @@ maxcycling74
 maxonapp
 maxqda24
 maxqda26
+mdmreportingtool
 mdmwatchdog
 meetingbar
 meistertask
@@ -1004,6 +1012,7 @@ reaper
 recordist
 rectangle
 redcanarymacmonitor
+redcinexpro
 redgiant
 redisinsight
 redshift
@@ -1024,10 +1033,12 @@ rhino7
 rhino8
 ricohpsprinters
 ricohtheta
+rightfont
 ringcentralapp
 ringcentralclassicapp
 ringcentralmeetings
 ringcentralphone
+rive
 riversidestudio
 rocket
 rocketchat
@@ -1062,6 +1073,7 @@ sdnotary
 sdnotary2
 seconddisplay
 secretive
+securecrt
 selfcontrol
 sequelace
 sequelpro
@@ -1131,6 +1143,7 @@ sqlprostudio
 sshfs
 stackfield
 starface10x
+starface11x
 starface90x
 starface91x
 stats
@@ -1145,6 +1158,7 @@ subethaedit
 sublimemerge
 sublimetext
 suitestudio
+sumb
 sunsama
 supercollider
 superhuman
@@ -1220,6 +1234,7 @@ toonboomharmonypremium2024
 toonboomharmonypremium2025
 toonboomstoryboardpro2024
 toonboomstoryboardpro2025
+toonboomstoryboardpro2027
 topazgigapixel
 topazgigapixelai
 topazphoto
@@ -1286,6 +1301,7 @@ vlc
 vmwarefusion
 vmwarehorizonclient
 vncconnect
+vocevistapro
 vocevistavideopro
 vonagebusiness
 vorssaint
